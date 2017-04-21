@@ -18,7 +18,7 @@ func (ps *Persister) Copy() *Persister {
 	ps.mu.Lock()
 	defer ps.mu.Unlock()
 	np := MakePersister()
-	np.raftstate = ps.state
+	np.state = ps.state
 	return np
 }
 
