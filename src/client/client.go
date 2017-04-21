@@ -5,15 +5,17 @@ import "sync"
 
 type BTClient struct {
     mu sync.Mutex
+    persister *btclient.Persister
     shutdown chan bool
 }
 
-func StartBTClient() *BTClient {
-    client := &BTClient{}
-    rf.shutdown = make(chan bool)
+func StartBTClient(persister *Persister) *BTClient {
+    cl := &BTClient{}
+    cl.persister = persister
+    cl.shutdown = make(chan bool)
 
-    go client.main()
-    return client
+    go cl.main()
+    return cl
 }
 
 func (cl *BTClient) Kill() {
