@@ -20,10 +20,10 @@ type BTTracker struct {
 	count    int
 }
 
-func StartBTTracker(file string) *BTTracker {
+func StartBTTracker(file string, port int) *BTTracker {
 	tr := &BTTracker{}
 	tr.file = file
 	// read info_hash from file
-	tr.main()
+	tr.main(port)
 	return tr
 }

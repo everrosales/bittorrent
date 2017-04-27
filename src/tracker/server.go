@@ -5,10 +5,7 @@ import (
 	"log"
 	"net/http"
 	"strconv"
-)
-
-const (
-	Port = 8000
+	"util"
 )
 
 // custom app handler with parameterized context
@@ -39,12 +36,12 @@ func IndexHandler(a *BTTracker, w http.ResponseWriter, r *http.Request) (int, er
 	//event := r.URL.Query().Get("event")
 
 	fmt.Fprintf(w, "hi user: %d, info_hash: %s", a.count, a.infoHash)
-	fmt.Printf("new count: %d\n", a.count)
+	util.TPrintf("new count: %d\n", a.count)
 	return 200, nil
 }
 
-func (tr *BTTracker) main() {
-	fmt.Printf("Tracker for %s listening on port %d\n", tr.file, Port)
+func (tr *BTTracker) main(port int) {
+	util.IPrintf("Tracker for %s listening on port %d\n", tr.file, port)
 	http.Get("/")
-	http.ListenAndServe(":"+strconv.Itoa(Port), appHandler{tr, IndexHandler})
+	http.ListenAndServe(":"+strconv.Itoa(port), appHandler{tr, IndexHandler})
 }
