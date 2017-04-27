@@ -1,4 +1,4 @@
-package bt_peer
+package btnet
 
 import "net"
 
@@ -36,5 +36,5 @@ type PeerStatus struct {
 type Peer struct {
   Status PeerStatus
   Bitfield []bool
-  Addr  TCPAddr
+  Addr  net.TCPAddr
 }
