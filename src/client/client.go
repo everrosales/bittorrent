@@ -3,6 +3,8 @@ package btclient
 
 import "sync"
 import "http"
+import "net"
+import "time"
 
 type TorrentMetadata struct {
     path string
@@ -13,8 +15,10 @@ type BTClient struct {
     persister *btclient.Persister
 
     files map[TorrentMetadata]string  // map from torrent metadata paths to their local download paths
-    seeding []TorrentMetadata
+    seeding []TorrentMetadata         // List of previous Torrent files and their Metadata
     shutdown chan bool
+    
+    peers []Peer                      // List of Peers and status of those peers
 }
 
 func StartBTClient(persister *Persister) *BTClient {
@@ -26,6 +30,10 @@ func StartBTClient(persister *Persister) *BTClient {
 
     go cl.main()
     return cl
+}
+
+func (cl *BTClient) dialTimeout() time.Duration {
+  return time.Millisecond * 100;
 }
 
 func (cl *BTClient) Kill() {
@@ -68,4 +76,15 @@ func (cl *BTClient) main() {
         }
         time.Sleep(10 * time.Millisecond)
     }
+}
+
+
+func (cl *BTClient) connectToPeer(addr string) {
+  conn, err := net.DialTimeout("tcp", addr, cl.dialTimeout())
+  if err {
+    // TODO: try again or mark peer as down
+  }
+  // Create hello message
+  // Send hello message to peer
+
 }
