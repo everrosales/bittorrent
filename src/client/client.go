@@ -17,7 +17,7 @@ type BTClient struct {
     files map[TorrentMetadata]string  // map from torrent metadata paths to their local download paths
     seeding []TorrentMetadata         // List of previous Torrent files and their Metadata
     shutdown chan bool
-    
+
     peers []Peer                      // List of Peers and status of those peers
 }
 
@@ -42,6 +42,9 @@ func (cl *BTClient) Kill() {
 
 func (cl *BTClient) contactTracker(url string) {
     http.Get(url)
+
+    // TODO: Update the list the list of Peers in BTClient struct
+    // Just call btnet.InitializePeer() to initialize the peer and store it in our array of peers
 }
 
 func (cl *BTClient) seed() {
