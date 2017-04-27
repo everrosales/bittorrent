@@ -46,7 +46,7 @@ func main() {
 	} else if *trackerFlag {
 		bttracker.StartBTTracker(*fileFlag, *portFlag)
 	} else if *clientFlag {
-		// start client
+		// TODO: start client
 	}
 
 }
