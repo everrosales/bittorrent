@@ -8,6 +8,7 @@ import (
 )
 
 func main() {
+	// TODO: add utility for making a .torrent file
 	clientFlag := flag.Bool("client", false, "Start client for torrent")
 	trackerFlag := flag.Bool("tracker", false, "Start tracker for torrent")
 	fileFlag := flag.String("file", "", "Torrent file (required)")
