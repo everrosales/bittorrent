@@ -57,3 +57,8 @@ func InitializePeer(addr string, bitfieldLength int) Peer {
 
   return peer
 }
+
+// fill in a PeerMessage struct from an array of bytes
+func ProcessMessage(data []byte) PeerMessage {
+
+}

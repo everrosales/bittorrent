@@ -22,14 +22,6 @@ func StartTCPServer(addr string, handler func(net.Conn)) {
   }(ln)
 }
 
-func SendHelloMsg(host string, port string) {
-  conn, err := net.DialTimeout("tcp", "golang.org:80", time.Millisecond * 500)
-  if err != nil {
-  	// handle error
-  }
-  fmt.Fprintf(conn, "GET / HTTP/1.0\r\n\r\n")
-  // status, err := bufio.NewReader(conn).ReadString('\n')
-}
 
 func doDial(addr *net.TCPAddr, data []byte) string {
   conn, err := net.DialTCP("tcp", nil, addr)

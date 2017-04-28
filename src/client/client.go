@@ -88,3 +88,9 @@ func (cl *BTClient) connectToPeer(addr string) {
 	// Send hello message to peer
 
 }
+
+func (cl *BTClient) messageHandler(conn net.Conn) {
+	// Process the message
+	// peerMessage := btnet.ProcessMessage(data)
+	// Massive switch case that would handle incoming messages depending on message type
+}
