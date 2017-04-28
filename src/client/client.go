@@ -125,7 +125,7 @@ func (cl *BTClient) messageHandler(conn net.Conn) {
 	if err != nil {
 		fmt.Println(err)
 	}
-	peerMessage := btnet.ProcessMessage(buf)
+	peerMessage := btnet.DecodePeerMessage(buf)
 	// Massive switch case that would handle incoming messages depending on message type
 
 	// peerMessage := btnet.PeerMessage{}  // empty for now, TODO

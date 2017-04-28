@@ -55,3 +55,21 @@ func DPrintf(c color, format string, a ...interface{}) (n int, err error) {
 	fmt.Printf(str, a...)
 	return
 }
+
+func CompareByteArray(first []byte, second []byte) bool{
+	if first == nil && second == nil {
+		return true
+	}
+	if first == nil || second == nil {
+		return false
+	}
+	if len(first) != len(second) {
+		return false
+	}
+	for i := range first {
+		if first[i] != second[i] {
+			return false
+		}
+	}
+	return true
+}

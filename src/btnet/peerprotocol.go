@@ -27,6 +27,7 @@ type PeerMessage struct {
   Bitfield []bool
   Block []byte
 
+  BlockLength int
   // Zero length messages are keep alive messages and have no type
   KeepAlive bool
 }
@@ -63,7 +64,7 @@ func InitializePeer(addr string, bitfieldLength int) Peer {
 }
 
 // fill in a PeerMessage struct from an array of bytes
-func ProcessMessage(data []byte) PeerMessage {
+func DecodePeerMessage(data []byte) PeerMessage {
 
   // messageType := data[0]
   var length int32
@@ -77,7 +78,7 @@ func ProcessMessage(data []byte) PeerMessage {
   if err != nil {
     fmt.Println("binary.Read failed:", err)
   }
-  peerMessage.Length = int(length)
+  // peerMessage.Length = int(length) // peerMessage.Length != length
   if length < 1 {
     // This is a keepalive message
     peerMessage.KeepAlive = true
@@ -95,22 +96,25 @@ func ProcessMessage(data []byte) PeerMessage {
   switch (peerMessage.Type) {
   case Choke:
     // No further information needs to be parsed
-    fmt.Println("Choke message")
-    return peerMessage
+    // fmt.Println("Choke message")
+    // return peerMessage
+    fallthrough
   case Unchoke:
     // No further information needs to be parsed
-    fmt.Println("Unchoke message")
-    return peerMessage
+    // fmt.Println("Unchoke message")
+    // return peerMessage
+    fallthrough
   case Interested:
     // No further information needs to be parsed
-    fmt.Println("Interested message")
-    return peerMessage
+    // fmt.Println("Interested message")
+    // return peerMessage
+    fallthrough
   case NotInterested:
     // No further information needs to be parsed
-    fmt.Println("NotInterested message")
+    // fmt.Println("NotInterested message")
     return peerMessage
   case Have:
-    fmt.Println("Have message")
+    // fmt.Println("Have message")
     var index int32
     err = binary.Read(buf, binary.BigEndian, &index)
     peerMessage.Index = index
@@ -128,4 +132,93 @@ func ProcessMessage(data []byte) PeerMessage {
   }
 
   return PeerMessage{}
+}
+
+func EncodePeerMessage(msg PeerMessage) []byte {
+  buf := new(bytes.Buffer)
+
+  if msg.KeepAlive {
+    return []byte{0x00, 0x00, 0x00, 0x00}
+  }
+	// var pi float64 = math.Pi
+	var err error
+  // err = binary.Write(buf, binary.BigEndian, msg.Type)
+	// if err != nil {
+	// 	fmt.Println("binary.Write failed:", err)
+	// }
+
+  switch (msg.Type) {
+  case Choke:
+    // err = binary.Write(buf, binary.BigEndian, int32(1))
+    // if err != nil {
+    //   fmt.Println("binary.Write failed:", err)
+    // }
+    // err = binary.Write(buf, binary.BigEndian, msg.Type)
+    // if err != nil {
+    //   fmt.Println("binary.Write failed:", err)
+    // }
+    // fmt.Println("Encoding Choke message")
+    fallthrough
+  case Unchoke:
+    // err = binary.Write(buf, binary.BigEndian, int32(1))
+    // if err != nil {
+    //   fmt.Println("binary.Write failed:", err)
+    // }
+    // err = binary.Write(buf, binary.BigEndian, msg.Type)
+    // if err != nil {
+    //   fmt.Println("binary.Write failed:", err)
+    // }
+    // fmt.Println("Encoding Unchoke message")
+    fallthrough
+  case Interested:
+    // err = binary.Write(buf, binary.BigEndian, int32(1))
+    // if err != nil {
+    //   fmt.Println("binary.Write failed:", err)
+    // }
+    // err = binary.Write(buf, binary.BigEndian, msg.Type)
+    // if err != nil {
+    //   fmt.Println("binary.Write failed:", err)
+    // }
+    // fmt.Println("Encoding Interested message")
+    fallthrough
+  case NotInterested:
+    err = binary.Write(buf, binary.BigEndian, int32(1))
+    if err != nil {
+      fmt.Println("binary.Write failed:", err)
+    }
+    err = binary.Write(buf, binary.BigEndian, msg.Type)
+    if err != nil {
+      fmt.Println("binary.Write failed:", err)
+    }
+    // fmt.Println("Encoding NotIntested message")
+  case Have:
+    err = binary.Write(buf, binary.BigEndian, int32(5))
+    if err != nil {
+      fmt.Println("binary.Write failed:", err)
+    }
+    err = binary.Write(buf, binary.BigEndian, msg.Type)
+    if err != nil {
+      fmt.Println("binary.Write failed:", err)
+    }
+    err = binary.Write(buf, binary.BigEndian, msg.Index)
+    if err != nil {
+      fmt.Println("binary.Write failed:", err)
+    }
+    fmt.Println("Encoding Have message")
+  case Bitfield:
+    fmt.Println("Encoding BitField message")
+  case Request:
+    fmt.Println("Encoding Request message")
+  case Piece:
+    fmt.Println("Encoding Piece message")
+  case Cancel:
+    fmt.Println("Encoding Cancel message")
+  default:
+    fmt.Println("Something went wrong")
+    return []byte{}
+  }
+	// fmt.Printf("% x", buf.Bytes())
+
+
+  return buf.Bytes()
 }
