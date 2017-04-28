@@ -25,6 +25,7 @@ type PeerMessage struct {
   Bitfield []bool
   Block []byte
   // Zero length messages are keep alive messages and have no type
+  KeepAlive bool
 }
 
 type PeerStatus struct {
@@ -60,5 +61,10 @@ func InitializePeer(addr string, bitfieldLength int) Peer {
 
 // fill in a PeerMessage struct from an array of bytes
 func ProcessMessage(data []byte) PeerMessage {
+  if len(data) < 1 {
+    // This is a keepalive message
+    return PeerMessage{KeepAlive: true}
+  }
+  messageType := data[0]
 
 }

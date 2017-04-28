@@ -30,6 +30,8 @@ func StartBTClient(persister *Persister) *BTClient {
 	cl.shutdown = make(chan bool)
 
 	go cl.main()
+	cl.listenForPeers()
+
 	return cl
 }
 
@@ -77,6 +79,12 @@ func (cl *BTClient) main() {
 		}
 		time.Sleep(10 * time.Millisecond)
 	}
+}
+
+func (cl *BTClient) listenForPeers() {
+	ip := "localhost"
+	port := "8080"
+	btnet.StartTCPServer(ip + ":" + port, cl.messageHandler)
 }
 
 func (cl *BTClient) connectToPeer(addr string) {
