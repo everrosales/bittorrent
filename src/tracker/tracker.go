@@ -1,6 +1,7 @@
 package bttracker
 
 import (
+	"fs"
 	"sync"
 )
 
@@ -30,11 +31,13 @@ type BTTracker struct {
 	peers    map[string]Peer
 }
 
-func StartBTTracker(file string, port int) *BTTracker {
+// Instantiate a new BTTracker
+func StartBTTracker(path string, port int) {
 	tr := &BTTracker{}
-	tr.file = file
+	tr.file = path
 	tr.peers = make(map[string]Peer)
-	// TODO: read info_hash from file
+	torrent := fs.ReadTorrent(path)
+	tr.infoHash = fs.GetInfoHash(torrent)
 	tr.main(port)
-	return tr
+	return
 }
