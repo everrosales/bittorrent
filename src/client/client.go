@@ -118,10 +118,17 @@ func (cl *BTClient) savePiece(index int, begin int, length int, piece []byte){
 
 func (cl *BTClient) messageHandler(conn net.Conn) {
 	// Process the message
-	// peerMessage := btnet.ProcessMessage(data)
+	// Max message size: 2^17 = 131072 (128KB)
+	var buf [131072]byte
+	bytesRead, err := conn.(*TCPConn).Read(buf)
+	fmt.Println(bytesRead)
+	if err != nil {
+		fmt.Println(err)
+	}
+	peerMessage := btnet.ProcessMessage(buf)
 	// Massive switch case that would handle incoming messages depending on message type
 
-	peerMessage := btnet.PeerMessage{}  // empty for now, TODO
+	// peerMessage := btnet.PeerMessage{}  // empty for now, TODO
 	cl.mu.Lock()
 	defer cl.mu.Unlock()
 
