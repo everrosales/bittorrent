@@ -3,10 +3,8 @@ package fs
 // For reading torrent metadata files
 
 import (
-	"bytes"
 	"crypto/sha1"
 	"encoding/base64"
-	"encoding/gob"
 	"fmt"
 	"github.com/zeebo/bencode"
 	"os"
@@ -49,14 +47,9 @@ func ReadTorrent(path string) Torrent {
 
 // Get escaped string of SHA1 hash of torrent's info field
 func GetInfoHash(torrent Torrent) string {
-	var b bytes.Buffer
+	bytes := GetBytes(torrent.Info)
 	h := sha1.New()
-	enc := gob.NewEncoder(&b)
-	err := enc.Encode(torrent.Info)
-	if err != nil {
-		panic(err)
-	}
-	h.Write(b.Bytes())
+	h.Write(bytes)
 	sha := base64.URLEncoding.EncodeToString(h.Sum(nil))
 	return sha
 }
@@ -82,7 +75,7 @@ func Read(path string) Metadata {
 		// // multiple files
 		// metadata.Files = []FileData{}
 		// obj := []interface{}{}
-		// files := decodeFromString(torrent.Info["files"], obj)
+		// files := Decode(torrent.Info["files"], obj)
 		// fmt.Println("%v", files)
 		// // for _, file := range files {
 		// //     fmt.Println("%T", file)
@@ -111,10 +104,10 @@ func Write(path string, data Metadata) {
 		// for _, file := range data.Files {
 		//     newFile := map[string]string{
 		//         "length": strconv.FormatUint(file.Length, 10),
-		//         "path": encodeToString(file.Path) }
+		//         "path": Encode(file.Path) }
 		//     files = append(files, newFile)
 		// }
-		// torrent.Info["files"] = encodeToString(files)
+		// torrent.Info["files"] = Encode(files)
 	}
 	file, err := os.Create(path)
 	if err != nil {

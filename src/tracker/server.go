@@ -2,6 +2,7 @@ package bttracker
 
 import (
 	"fmt"
+	"fs"
 	"net/http"
 	"strconv"
 	"util"
@@ -15,6 +16,29 @@ const (
 type appHandler struct {
 	trackerContext *BTTracker
 	H              func(*BTTracker, http.ResponseWriter, *http.Request) (int, error)
+}
+
+type SuccessResponse struct {
+	Interval int
+	Peers    []map[string]string
+}
+
+type FailureResponse struct {
+	Failure string
+}
+
+func writeSuccess(w http.ResponseWriter, interval int, peers []map[string]string) (int, error) {
+	// TODO: escape response
+	resp := fs.Encode(SuccessResponse{interval, peers})
+	fmt.Fprintf(w, resp)
+	return 200, nil
+}
+
+func writeFailure(w http.ResponseWriter, format string, a ...interface{}) (int, error) {
+	// TODO: escape response
+	resp := fs.Encode(FailureResponse{fmt.Sprintf(format, a...)})
+	fmt.Fprintf(w, resp)
+	return 200, nil
 }
 
 func (ah appHandler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
@@ -46,29 +70,28 @@ func IndexHandler(tr *BTTracker, w http.ResponseWriter, r *http.Request) (int, e
 
 	// checking valid parameters
 	if errPort != nil || errUp != nil || errDown != nil || errLeft != nil {
-		return 400, fmt.Errorf("bad parameter")
+		return writeFailure(w, "bad parameter (non-integer value)")
 	} else if infoHash != tr.infoHash {
-		return 400, fmt.Errorf("invalid infohash %s", infoHash)
+		return writeFailure(w, "invalid infohash %s", infoHash)
 	} else if port < 1 || port > 65535 {
-		return 400, fmt.Errorf("invalid port %d", port)
+		return writeFailure(w, "invalid port %s", port)
 	} else if len(peerId) != PeerIdLength {
-		return 400, fmt.Errorf("invalid peerId %s", peerId)
+		return writeFailure(w, "invalid peerId %s", peerId)
 	} else if event != Started && event != Completed && event != Stopped && event != Empty {
-		return 400, fmt.Errorf("invalid event %s", event)
+		return writeFailure(w, "invalid event %s", event)
 	}
 
 	// good request; applying update
-	peer := Peer{peerId, ip, port, uploaded, downloaded, left, event}
+	peer := peer{peerId, ip, port, uploaded, downloaded, left, event}
 
 	tr.mu.Lock()
 	tr.peers[peerId] = peer
 	numPeers := len(tr.peers)
+	peers := tr.getPeers()
 	tr.mu.Unlock()
 
-	// TODO: encode peers here and respond
 	util.TPrintf("Received request from %s, now have %d peer(s)\n", peerId, numPeers)
-	fmt.Fprintf(w, "info_hash: %d, new peer: %v\n", infoHash, peer)
-	return 200, nil
+	return writeSuccess(w, 0, peers)
 }
 
 func (tr *BTTracker) main(port int) {
