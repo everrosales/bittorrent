@@ -4,7 +4,7 @@ package btnet
 import "net"
 import "fmt"
 import "bufio"
-import "time"
+// import "time"
 
 func StartTCPServer(addr string, handler func(net.Conn)) {
   ln, err := net.Listen("tcp", addr)
