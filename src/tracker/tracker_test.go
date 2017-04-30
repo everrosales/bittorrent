@@ -1,15 +1,11 @@
 package bttracker
 
-// tracker test
-// TODO: add tests
-
 import (
 	"fs"
 	"io/ioutil"
 	"net/http"
 	"strconv"
 	"testing"
-	"time"
 	"util"
 )
 
@@ -23,7 +19,6 @@ type requestParams struct {
 	infoHash   string
 }
 
-const Port = 8000
 const BaseStr = "http://localhost:8000/"
 const Peer1 = "aaaaaaaaaaaaaaaaaaaa"
 const Peer2 = "bbbbbbbbbbbbbbbbbbbb"
@@ -32,20 +27,21 @@ const Port2 = "6883"
 const InfoHash = "fjm2CfSuEB9m5HqNDp4ZBMi-_FE="
 
 // Helpers
-func makeTestTracker() *BTTracker {
-	util.Debug = util.Trace
-	return StartBTTracker("../main/test.torrent", Port)
+func makeTestTracker(port int) *BTTracker {
+	util.Debug = util.None
+	return StartBTTracker("../main/test.torrent", port)
 }
 
-func startTest(desc string) *BTTracker {
+func startTest(desc string, port int) *BTTracker {
 	util.DPrintf(util.Default, desc)
-	tr := makeTestTracker()
+	tr := makeTestTracker(port)
 	return tr
 }
 
 func endTest(tr *BTTracker) {
-	<-time.After(time.Millisecond * 1000)
+	util.Wait(1000)
 	tr.Kill()
+	util.Wait(1000)
 	util.DPrintf(util.Green, " pass\n")
 }
 
@@ -59,12 +55,12 @@ func makeUrlWithParams(req *requestParams) string {
 
 // Tests
 func TestMakeTracker(t *testing.T) {
-	tr := startTest("Testing basic starting and killing of tracker...")
+	tr := startTest("Testing basic starting and killing of tracker...", 8000)
 	endTest(tr)
 }
 
 func TestBasicRequest(t *testing.T) {
-	tr := startTest("Testing basic request to tracker...")
+	tr := startTest("Testing basic request to tracker...", 8001)
 	params := requestParams{Peer1, "", Port1, 0, 0, 300, InfoHash}
 	url := makeUrlWithParams(&params)
 	resp, err := http.Get(url)
@@ -97,3 +93,11 @@ func TestBasicRequest(t *testing.T) {
 	}
 	endTest(tr)
 }
+
+// TODO: add tests for expected failure (e.g. missing param, non-int param)
+
+// TODO: add tests for peer logic (multiple peers)
+
+// TODO: add tests for many peers (like 100)
+
+// TODO: add tests for peer heartbeats

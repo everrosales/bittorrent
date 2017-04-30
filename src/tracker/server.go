@@ -57,10 +57,6 @@ func (ah appHandler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 
 // handle GET /
 func IndexHandler(tr *BTTracker, w http.ResponseWriter, r *http.Request) (int, error) {
-	if tr.CheckShutdown() {
-		tr.srv.Close()
-		return writeFailure(w, "server shutdown")
-	}
 	// parsing query params
 	infoHash := r.URL.Query().Get("info_hash")
 	peerId := r.URL.Query().Get("peer_id")
@@ -111,5 +107,15 @@ func (tr *BTTracker) main(port int) {
 	tr.mu.Unlock()
 
 	http.Get("/")
+	go func() {
+		for {
+			if tr.CheckShutdown() {
+				tr.srv.Close()
+				util.IPrintf("Shutting down tracker...\n")
+				return
+			}
+			util.Wait(10)
+		}
+	}()
 	http.ListenAndServe(portStr, appHandler{tr, IndexHandler})
 }
