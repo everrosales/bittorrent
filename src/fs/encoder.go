@@ -31,7 +31,7 @@ func Encode(obj interface{}) string {
 }
 
 // decode string to interface
-func Decode(data string, obj *interface{}) {
+func Decode(data string, obj interface{}) {
 	var buf bytes.Buffer
 	buf.WriteString(data)
 	dec := bencode.NewDecoder(&buf)

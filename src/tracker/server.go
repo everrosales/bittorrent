@@ -10,7 +10,8 @@ import (
 )
 
 const (
-	PeerIdLength = 20
+	PeerIdLength    = 20
+	DefaultInterval = 30
 )
 
 // custom app handler with parameterized context
@@ -98,11 +99,11 @@ func IndexHandler(tr *BTTracker, w http.ResponseWriter, r *http.Request) (int, e
 	tr.mu.Unlock()
 
 	util.TPrintf("Received request from %s (ip: %s), now have %d peer(s)\n", peerId, ip, numPeers)
-	return writeSuccess(w, 0, peers)
+	return writeSuccess(w, DefaultInterval, peers)
 }
 
 func (tr *BTTracker) main(port int) {
-	util.IPrintf("Tracker for %s listening on port %d\n", tr.file, port)
+	util.IPrintf("\nTracker for %s listening on port %d\n", tr.file, port)
 	portStr := ":" + strconv.Itoa(port)
 
 	tr.mu.Lock()
