@@ -1,6 +1,7 @@
 package util
 
 import (
+	"bytes"
 	"fmt"
 )
 
@@ -56,7 +57,7 @@ func DPrintf(c color, format string, a ...interface{}) (n int, err error) {
 	return
 }
 
-func CompareByteArray(first []byte, second []byte) bool{
+func CompareByteArray(first []byte, second []byte) bool {
 	if first == nil && second == nil {
 		return true
 	}
@@ -72,4 +73,24 @@ func CompareByteArray(first []byte, second []byte) bool{
 		}
 	}
 	return true
+}
+
+// from http://stackoverflow.com/questions/25686109/split-string-by-length-in-golang
+func SplitEveryN(s string, n int) []string {
+	sub := ""
+	subs := []string{}
+
+	runes := bytes.Runes([]byte(s))
+	l := len(runes)
+	for i, r := range runes {
+		sub = sub + string(r)
+		if (i+1)%n == 0 {
+			subs = append(subs, sub)
+			sub = ""
+		} else if (i + 1) == l {
+			subs = append(subs, sub)
+		}
+	}
+
+	return subs
 }

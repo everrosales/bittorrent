@@ -53,3 +53,5 @@ func (tr BTTracker) getPeers() []map[string]string {
 	}
 	return peers
 }
+
+// TODO: set timeout for peers in list

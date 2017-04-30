@@ -10,6 +10,7 @@ import (
 	"os"
 	"strconv"
 	"strings"
+	"util"
 )
 
 type Torrent struct {
@@ -62,7 +63,7 @@ func Read(path string) Metadata {
 	metadata.TrackerUrl = torrent.Announce
 	metadata.Name = torrent.Info["name"]
 	metadata.PieceLen, _ = strconv.ParseUint(torrent.Info["piece length"], 0, 64)
-	metadata.PieceHashes = splitEveryN(torrent.Info["pieces"], 20)
+	metadata.PieceHashes = util.SplitEveryN(torrent.Info["pieces"], 20)
 	if _, ok := torrent.Info["length"]; ok {
 		// single file
 		length, _ := strconv.ParseUint(torrent.Info["length"], 0, 64)
