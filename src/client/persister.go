@@ -4,10 +4,12 @@ package btclient
 // Modified from 6.824 raft/persister.go
 
 import "sync"
+import "io/ioutil"
 
 type Persister struct {
 	mu        sync.Mutex
 	state []byte
+	path string
 }
 
 func MakePersister() *Persister {
@@ -25,12 +27,19 @@ func (ps *Persister) Copy() *Persister {
 func (ps *Persister) SaveState(data []byte) {
 	ps.mu.Lock()
 	defer ps.mu.Unlock()
+	ioutil.WriteFile(ps.path, data, 0644)
 	ps.state = data
 }
 
 func (ps *Persister) ReadState() []byte {
 	ps.mu.Lock()
 	defer ps.mu.Unlock()
+	data, err := ioutil.ReadFile(ps.path)
+	if err != nil {
+		ps.state = nil
+	} else {
+		ps.state = data
+	}
 	return ps.state
 }
 

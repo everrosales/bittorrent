@@ -5,7 +5,7 @@ import "time"
 
 func makeTestClient() *BTClient {
   persister := MakePersister()
-  return StartBTClient("localhost", "6666", persister)
+  return StartBTClient("localhost", "6666", "test.torrent" persister)
 }
 
 func TestMakeClient(t *testing.T) {
