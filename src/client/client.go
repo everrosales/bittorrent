@@ -3,10 +3,11 @@ package btclient
 //Client
 
 import "sync"
-import "net"
 import "net/http"
+import "net"
 import "time"
 import "btnet"
+import "fmt"
 
 type TorrentMetadata struct {
 	path string
@@ -14,9 +15,11 @@ type TorrentMetadata struct {
 
 type BTClient struct {
 	mu        sync.Mutex
-	persister *btclient.Persister
+	persister *Persister
 
-	addr net.Addr
+	// addr net.Addr
+  ip string
+  port string
 
 	files    map[TorrentMetadata]string // map from torrent metadata paths to their local download paths
 	seeding  []TorrentMetadata          // List of previous Torrent files and their Metadata
@@ -64,8 +67,11 @@ func (cl *BTClient) seed() {
 			url := "" // TODO get from file
 			go cl.contactTracker(url)
 
+      //TODO: only here for compilation
+      fmt.Println(file)
 		}
-		cl.mu.Unlock()
+
+    cl.mu.Unlock()
 		time.Sleep(1 * time.Second)
 	}
 }
@@ -83,9 +89,9 @@ func (cl *BTClient) main() {
 
 
 // returns true if the client has been ordered to shut down
-func (cl *BTClient) checkShutdown() {
+func (cl *BTClient) checkShutdown() bool {
 	select {
-	case _, ok := <-rf.shutdown:
+	case _, ok := <-cl.shutdown:
 		if !ok {
 			return true
 		}
@@ -96,16 +102,25 @@ func (cl *BTClient) checkShutdown() {
 
 func (cl *BTClient) connectToPeer(addr string) {
 	conn, err := net.DialTimeout("tcp", addr, cl.dialTimeout())
-	if err {
+	if err != nil {
 		// TODO: try again or mark peer as down
 	}
 	// Create hello message
+  // TODO: here for compilation hehe
+  if conn!=nil {}
 	// Send hello message to peer
 
 }
 
+func (cl *BTClient) listenForPeers() {
+  // Set up stuff
+  cl.startServer()
+
+  //TODO: Send initial hello packets
+}
+
 func (cl *BTClient) startServer() {
-	btnet.StartTCPServer(ip + ":" + port, cl.messageHandler)
+	btnet.StartTCPServer(cl.ip + ":" + cl.port, cl.messageHandler)
 }
 
 func (cl *BTClient) sendPiece(index int, begin int, length int, peer btnet.Peer){
@@ -119,8 +134,8 @@ func (cl *BTClient) savePiece(index int, begin int, length int, piece []byte){
 func (cl *BTClient) messageHandler(conn net.Conn) {
 	// Process the message
 	// Max message size: 2^17 = 131072 (128KB)
-	var buf [131072]byte
-	bytesRead, err := conn.(*TCPConn).Read(buf)
+	buf := make([]byte, 131072)
+	bytesRead, err := conn.(*net.TCPConn).Read(buf)
 	fmt.Println(bytesRead)
 	if err != nil {
 		fmt.Println(err)
@@ -148,9 +163,9 @@ func (cl *BTClient) messageHandler(conn net.Conn) {
 	case btnet.Bitfield:
 		peer.Bitfield = peerMessage.Bitfield
 	case btnet.Request:
-		cl.sendPiece(peerMessage.Index, peerMessage.Begin, peerMessage.Length, peer)
+		cl.sendPiece(int(peerMessage.Index), peerMessage.Begin, peerMessage.Length, peer)
 	case btnet.Piece:
-		cl.savePiece(peerMessage.Index, peerMessage.Begin, peerMessage.Block)
+		cl.savePiece(int(peerMessage.Index), peerMessage.Begin, peerMessage.Length, peerMessage.Block)
 	case btnet.Cancel:
 		// TODO
 	default:

@@ -17,6 +17,7 @@ func StartTCPServer(addr string, handler func(net.Conn)) {
     conn, err := ln.Accept()
     if err != nil {
       // complain about a thing
+      fmt.Println(err)
     }
     go handler(conn)
   }(ln)
