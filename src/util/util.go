@@ -57,7 +57,7 @@ func DPrintf(c color, format string, a ...interface{}) (n int, err error) {
 	return
 }
 
-func CompareByteArray(first []byte, second []byte) bool {
+func ByteArrayEquals(first []byte, second []byte) bool {
 	if first == nil && second == nil {
 		return true
 	}
@@ -93,4 +93,16 @@ func SplitEveryN(s string, n int) []string {
 	}
 
 	return subs
+}
+
+func TestStartPrintf(format string, a ...interface{}) {
+  str := "----------------\n" + format
+  fmt.Printf(str, a...)
+  return
+}
+
+func TestFinishPrintf(format string, a ...interface{}) {
+  str := format + "----------------\n"
+  fmt.Printf(str, a...)
+  return
 }

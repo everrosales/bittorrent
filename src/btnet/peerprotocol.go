@@ -42,18 +42,19 @@ type PeerStatus struct {
 type Peer struct {
   Status PeerStatus
   Bitfield []bool
-  Addr  net.TCPAddr
+  Addr  net.Addr
 }
 
 // addr of format "192.168.1.0:8080"
-func InitializePeer(addr string, bitfieldLength int) Peer {
-  tcpAddr, err := net.ResolveTCPAddr("tcp", addr)
+func InitializePeer(addr net.Addr, bitfieldLength int) Peer {
+  // tcpAddr, err := net.ResolveTCPAddr("tcp", addr)
   peer := Peer{}
-  if err != nil {
-    fmt.Println(err)
-    return peer
-  }
-  peer.Addr = *tcpAddr
+  // if err != nil {
+  //   fmt.Println(err)
+  //   return peer
+  // }
+  // peer.Addr = *tcpAddr
+  peer.Addr = addr
   peer.Bitfield = make([]bool, bitfieldLength)
   peer.Status.AmChoking = true
   peer.Status.AmInterested = false

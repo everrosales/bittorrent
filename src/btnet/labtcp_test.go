@@ -4,7 +4,8 @@ import "testing"
 import "fmt"
 import "net"
 // import "strconv"
-import "strings"
+import "util"
+// import "strings"
 
 
 func testTCPHandler(conn net.Conn) {
@@ -17,7 +18,7 @@ func testTCPHandler(conn net.Conn) {
     fmt.Println(err)
   }
   // fmt.Println(string(b) + "bytesRead: " + strconv.Itoa(bytesRead))
-  data := "I got you fam\n"
+  data := []byte{0x00, 0x00, 0x00, 0x05, 0x04, 0x00, 0x00, 0x80, 0x00}
   tcpConn.Write([]byte(data))
   tcpConn.Close()
 }
@@ -27,12 +28,19 @@ func TestTCP(t *testing.T) {
   StartTCPServer("localhost:6666", testTCPHandler)
   servAddr := "localhost:6666"
   tcpAddr, _ := net.ResolveTCPAddr("tcp", servAddr)
-  data := "send me pls\n"
-  actual := doDial(tcpAddr,[]byte(data))
-  expected := "I got you fam\n"
-  if strings.Compare(expected, actual) != 0 {
+  // Send an interested msg
+  data := []byte{0x00, 0x00, 0x00, 0x01, 0x02}
+
+  conn := DoDial(tcpAddr,data)
+  fmt.Println(data)
+  actual := ReadMessage(conn)
+  expected :=  []byte{0x00, 0x00, 0x00, 0x05, 0x04, 0x00, 0x00, 0x80, 0x00}
+
+  if !util.ByteArrayEquals(expected, actual) {
     t.Fail()
-    fmt.Printf("Expected: " + expected + " Got: " + actual)
+    fmt.Printf("Expected: ", expected ," Got: ", actual)
   }
   fmt.Println("Passed\n-----------------")
 }
+
+// TODO: theres a lot more logic in DoDial now... we should really test it

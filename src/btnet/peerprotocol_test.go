@@ -85,7 +85,7 @@ func TestDecodeHaveMessage(t *testing.T) {
 func TestEncodeKeepAliveMessage(t *testing.T) {
   actual := EncodePeerMessage(KeepAliveMsg)
   expected := KeepAliveBytes
-  if !util.CompareByteArray(actual, expected) {
+  if !util.ByteArrayEquals(actual, expected) {
     t.Fail()
   }
 }
@@ -93,7 +93,7 @@ func TestEncodeKeepAliveMessage(t *testing.T) {
 func TestEncodeChokeMessage(t *testing.T) {
   actual := EncodePeerMessage(ChokeMsg)
   expected := ChokeBytes
-  if !util.CompareByteArray(actual, expected) {
+  if !util.ByteArrayEquals(actual, expected) {
     t.Fail()
   }
 }

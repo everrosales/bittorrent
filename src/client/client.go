@@ -134,13 +134,15 @@ func (cl *BTClient) savePiece(index int, begin int, length int, piece []byte) {
 func (cl *BTClient) messageHandler(conn net.Conn) {
 	// Process the message
 	// Max message size: 2^17 = 131072 (128KB)
-	buf := make([]byte, 131072)
-	bytesRead, err := conn.(*net.TCPConn).Read(buf)
-	fmt.Println(bytesRead)
-	if err != nil {
-    fmt.Println("hi")
-		fmt.Println(err)
-	}
+	// buf := make([]byte, 131072)
+	// bytesRead, err := conn.(*net.TCPConn).Read(buf)
+	// fmt.Println(bytesRead)
+	// if err != nil {
+  //   fmt.Println("hi")
+	// 	fmt.Println(err)
+	// }
+  buf := btnet.ReadMessage(conn.(*net.TCPConn))
+
 	peerMessage := btnet.DecodePeerMessage(buf)
 	// Massive switch case that would handle incoming messages depending on message type
 
@@ -148,7 +150,12 @@ func (cl *BTClient) messageHandler(conn net.Conn) {
 	cl.mu.Lock()
 	defer cl.mu.Unlock()
 
-	peer := cl.peers[conn.RemoteAddr()]
+	peer, ok := cl.peers[conn.RemoteAddr()]
+  if !ok {
+    // InitializePeer
+    // TODO: use the actual length len(cl.torrent.PieceHashes)
+    cl.peers[conn.RemoteAddr()] = btnet.InitializePeer(conn.RemoteAddr(), 10)
+  }
 
 	switch peerMessage.Type {
 	case btnet.Choke:
