@@ -55,6 +55,10 @@ func (ah appHandler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 
 // handle GET /
 func IndexHandler(tr *BTTracker, w http.ResponseWriter, r *http.Request) (int, error) {
+	if tr.checkShutdown() {
+		tr.srv.Close()
+		return writeFailure(w, "server shutdown")
+	}
 	// parsing query params
 	infoHash := r.URL.Query().Get("info_hash")
 	peerId := r.URL.Query().Get("peer_id")
@@ -96,6 +100,10 @@ func IndexHandler(tr *BTTracker, w http.ResponseWriter, r *http.Request) (int, e
 
 func (tr *BTTracker) main(port int) {
 	util.IPrintf("Tracker for %s listening on port %d\n", tr.file, port)
+	portStr := ":" + strconv.Itoa(port)
+	tr.mu.Lock()
+	tr.srv = &http.Server{Addr: portStr}
+	tr.mu.Unlock()
 	http.Get("/")
-	http.ListenAndServe(":"+strconv.Itoa(port), appHandler{tr, IndexHandler})
+	http.ListenAndServe(portStr, appHandler{tr, IndexHandler})
 }
