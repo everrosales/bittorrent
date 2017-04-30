@@ -3,13 +3,15 @@ package bttracker
 import (
 	"fmt"
 	"fs"
+	"net"
 	"net/http"
 	"strconv"
 	"util"
 )
 
 const (
-	PeerIdLength = 20
+	PeerIdLength    = 20
+	DefaultInterval = 30
 )
 
 // custom app handler with parameterized context
@@ -55,6 +57,10 @@ func (ah appHandler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 
 // handle GET /
 func IndexHandler(tr *BTTracker, w http.ResponseWriter, r *http.Request) (int, error) {
+	if tr.CheckShutdown() {
+		tr.srv.Close()
+		return writeFailure(w, "server shutdown")
+	}
 	// parsing query params
 	infoHash := r.URL.Query().Get("info_hash")
 	peerId := r.URL.Query().Get("peer_id")
@@ -79,6 +85,8 @@ func IndexHandler(tr *BTTracker, w http.ResponseWriter, r *http.Request) (int, e
 		return writeFailure(w, "invalid peerId %s", peerId)
 	} else if event != Started && event != Completed && event != Stopped && event != Empty {
 		return writeFailure(w, "invalid event %s", event)
+	} else if ip == "" {
+		ip, _, _ = net.SplitHostPort(r.RemoteAddr)
 	}
 
 	// good request; applying update
@@ -90,12 +98,18 @@ func IndexHandler(tr *BTTracker, w http.ResponseWriter, r *http.Request) (int, e
 	peers := tr.getPeers()
 	tr.mu.Unlock()
 
-	util.TPrintf("Received request from %s, now have %d peer(s)\n", peerId, numPeers)
-	return writeSuccess(w, 0, peers)
+	util.TPrintf("Received request from %s (ip: %s), now have %d peer(s)\n", peerId, ip, numPeers)
+	return writeSuccess(w, DefaultInterval, peers)
 }
 
 func (tr *BTTracker) main(port int) {
-	util.IPrintf("Tracker for %s listening on port %d\n", tr.file, port)
+	util.IPrintf("\nTracker for %s listening on port %d\n", tr.file, port)
+	portStr := ":" + strconv.Itoa(port)
+
+	tr.mu.Lock()
+	tr.srv = &http.Server{Addr: portStr}
+	tr.mu.Unlock()
+
 	http.Get("/")
-	http.ListenAndServe(":"+strconv.Itoa(port), appHandler{tr, IndexHandler})
+	http.ListenAndServe(portStr, appHandler{tr, IndexHandler})
 }

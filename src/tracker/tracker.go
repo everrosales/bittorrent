@@ -2,6 +2,7 @@ package bttracker
 
 import (
 	"fs"
+	"net/http"
 	"strconv"
 	"sync"
 )
@@ -32,20 +33,39 @@ type BTTracker struct {
 	infoHash string
 	mu       sync.Mutex
 	peers    map[string]peer
+	shutdown chan bool
+	srv      *http.Server
 }
 
 // Instantiate a new BTTracker
-func StartBTTracker(path string, port int) {
+func StartBTTracker(path string, port int) *BTTracker {
 	tr := &BTTracker{}
 	tr.file = path
 	tr.peers = make(map[string]peer)
+	tr.shutdown = make(chan bool)
 	torrent := fs.ReadTorrent(path)
 	tr.infoHash = fs.GetInfoHash(torrent)
-	tr.main(port)
-	return
+	go tr.main(port)
+	return tr
 }
 
-func (tr BTTracker) getPeers() []map[string]string {
+func (tr *BTTracker) Kill() {
+	close(tr.shutdown)
+}
+
+// returns true if the tracker has been ordered to shut down
+func (tr *BTTracker) CheckShutdown() bool {
+	select {
+	case _, ok := <-tr.shutdown:
+		if !ok {
+			return true
+		}
+	default:
+	}
+	return false
+}
+
+func (tr *BTTracker) getPeers() []map[string]string {
 	peers := [](map[string]string){}
 	for _, v := range tr.peers {
 		p := map[string]string{"peer id": v.peerId, "ip": v.ip, "port": strconv.Itoa(v.port)}
