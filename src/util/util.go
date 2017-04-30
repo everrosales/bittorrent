@@ -3,6 +3,7 @@ package util
 import (
 	"bytes"
 	"fmt"
+	"time"
 )
 
 type color string
@@ -55,6 +56,10 @@ func DPrintf(c color, format string, a ...interface{}) (n int, err error) {
 	str := string(c) + format + string(Reset)
 	fmt.Printf(str, a...)
 	return
+}
+
+func Wait(milliseconds int) {
+	<-time.After(time.Millisecond * time.Duration(milliseconds))
 }
 
 func CompareByteArray(first []byte, second []byte) bool {
