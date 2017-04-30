@@ -23,6 +23,7 @@ func testTCPHandler(conn net.Conn) {
 }
 
 func TestTCP(t *testing.T) {
+  fmt.Println("-----------------\nRunning: TestTCP")
   StartTCPServer("localhost:6666", testTCPHandler)
   servAddr := "localhost:6666"
   tcpAddr, _ := net.ResolveTCPAddr("tcp", servAddr)
@@ -33,4 +34,5 @@ func TestTCP(t *testing.T) {
     t.Fail()
     fmt.Printf("Expected: " + expected + " Got: " + actual)
   }
+  fmt.Println("Passed\n-----------------")
 }

@@ -40,7 +40,7 @@ func StartBTClient(ip string, port string, persister *Persister) *BTClient {
 	cl.shutdown = make(chan bool)
 
 	go cl.main()
-	cl.listenForPeers()
+	// cl.listenForPeers()
 
 	return cl
 }
@@ -112,12 +112,12 @@ func (cl *BTClient) connectToPeer(addr string) {
 
 }
 
-func (cl *BTClient) listenForPeers() {
-  // Set up stuff
-  cl.startServer()
-
-  //TODO: Send initial hello packets
-}
+// func (cl *BTClient) listenForPeers() {
+//   // Set up stuff
+//   cl.startServer()
+//
+//   //TODO: Send initial hello packets
+// }
 
 func (cl *BTClient) startServer() {
 	btnet.StartTCPServer(cl.ip + ":" + cl.port, cl.messageHandler)
@@ -138,6 +138,7 @@ func (cl *BTClient) messageHandler(conn net.Conn) {
 	bytesRead, err := conn.(*net.TCPConn).Read(buf)
 	fmt.Println(bytesRead)
 	if err != nil {
+    fmt.Println("hi")
 		fmt.Println(err)
 	}
 	peerMessage := btnet.DecodePeerMessage(buf)

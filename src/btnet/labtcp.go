@@ -7,6 +7,7 @@ import "bufio"
 // import "time"
 
 func StartTCPServer(addr string, handler func(net.Conn)) {
+  fmt.Println("Starting the TCP Server")
   ln, err := net.Listen("tcp", addr)
   if err != nil {
     // complain about things dying

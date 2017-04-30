@@ -5,7 +5,7 @@ import "time"
 
 func makeTestClient() *BTClient {
   persister := MakePersister()
-  return StartBTClient("127.0.0.1", "8000", persister)
+  return StartBTClient("localhost", "6666", persister)
 }
 
 func TestMakeClient(t *testing.T) {
