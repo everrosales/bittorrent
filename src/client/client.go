@@ -18,8 +18,8 @@ type BTClient struct {
 	persister *Persister
 
 	// addr net.Addr
-  ip string
-  port string
+	ip   string
+	port string
 
 	files    map[TorrentMetadata]string // map from torrent metadata paths to their local download paths
 	seeding  []TorrentMetadata          // List of previous Torrent files and their Metadata
@@ -67,11 +67,11 @@ func (cl *BTClient) seed() {
 			url := "" // TODO get from file
 			go cl.contactTracker(url)
 
-      //TODO: only here for compilation
-      fmt.Println(file)
+			//TODO: only here for compilation
+			fmt.Println(file)
 		}
 
-    cl.mu.Unlock()
+		cl.mu.Unlock()
 		time.Sleep(1 * time.Second)
 	}
 }
@@ -86,7 +86,6 @@ func (cl *BTClient) main() {
 		time.Sleep(10 * time.Millisecond)
 	}
 }
-
 
 // returns true if the client has been ordered to shut down
 func (cl *BTClient) checkShutdown() bool {
@@ -106,28 +105,29 @@ func (cl *BTClient) connectToPeer(addr string) {
 		// TODO: try again or mark peer as down
 	}
 	// Create hello message
-  // TODO: here for compilation hehe
-  if conn!=nil {}
+	// TODO: here for compilation hehe
+	if conn != nil {
+	}
 	// Send hello message to peer
 
 }
 
 func (cl *BTClient) listenForPeers() {
-  // Set up stuff
-  cl.startServer()
+	// Set up stuff
+	cl.startServer()
 
-  //TODO: Send initial hello packets
+	//TODO: Send initial hello packets
 }
 
 func (cl *BTClient) startServer() {
-	btnet.StartTCPServer(cl.ip + ":" + cl.port, cl.messageHandler)
+	btnet.StartTCPServer(cl.ip+":"+cl.port, cl.messageHandler)
 }
 
-func (cl *BTClient) sendPiece(index int, begin int, length int, peer btnet.Peer){
+func (cl *BTClient) sendPiece(index int, begin int, length int, peer btnet.Peer) {
 	// TODO
 }
 
-func (cl *BTClient) savePiece(index int, begin int, length int, piece []byte){
+func (cl *BTClient) savePiece(index int, begin int, length int, piece []byte) {
 	// TODO
 }
 
