@@ -3,6 +3,7 @@ package bttracker
 import (
 	"fmt"
 	"fs"
+	"net"
 	"net/http"
 	"strconv"
 	"util"
@@ -55,7 +56,7 @@ func (ah appHandler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 
 // handle GET /
 func IndexHandler(tr *BTTracker, w http.ResponseWriter, r *http.Request) (int, error) {
-	if tr.checkShutdown() {
+	if tr.CheckShutdown() {
 		tr.srv.Close()
 		return writeFailure(w, "server shutdown")
 	}
@@ -83,6 +84,8 @@ func IndexHandler(tr *BTTracker, w http.ResponseWriter, r *http.Request) (int, e
 		return writeFailure(w, "invalid peerId %s", peerId)
 	} else if event != Started && event != Completed && event != Stopped && event != Empty {
 		return writeFailure(w, "invalid event %s", event)
+	} else if ip == "" {
+		ip, _, _ = net.SplitHostPort(r.RemoteAddr)
 	}
 
 	// good request; applying update
@@ -94,16 +97,18 @@ func IndexHandler(tr *BTTracker, w http.ResponseWriter, r *http.Request) (int, e
 	peers := tr.getPeers()
 	tr.mu.Unlock()
 
-	util.TPrintf("Received request from %s, now have %d peer(s)\n", peerId, numPeers)
+	util.TPrintf("Received request from %s (ip: %s), now have %d peer(s)\n", peerId, ip, numPeers)
 	return writeSuccess(w, 0, peers)
 }
 
 func (tr *BTTracker) main(port int) {
 	util.IPrintf("Tracker for %s listening on port %d\n", tr.file, port)
 	portStr := ":" + strconv.Itoa(port)
+
 	tr.mu.Lock()
 	tr.srv = &http.Server{Addr: portStr}
 	tr.mu.Unlock()
+
 	http.Get("/")
 	http.ListenAndServe(portStr, appHandler{tr, IndexHandler})
 }

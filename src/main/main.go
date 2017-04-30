@@ -45,7 +45,10 @@ func main() {
 		util.EPrintf("Select either client or tracker.\n")
 		return
 	} else if *trackerFlag {
-		bttracker.StartBTTracker(*fileFlag, *portFlag)
+		tr := bttracker.StartBTTracker(*fileFlag, *portFlag)
+		for !tr.CheckShutdown() {
+		}
+		return
 	} else if *clientFlag {
 		// TODO: start client
 	}

@@ -54,7 +54,7 @@ func (tr *BTTracker) Kill() {
 }
 
 // returns true if the tracker has been ordered to shut down
-func (tr *BTTracker) checkShutdown() bool {
+func (tr *BTTracker) CheckShutdown() bool {
 	select {
 	case _, ok := <-tr.shutdown:
 		if !ok {
