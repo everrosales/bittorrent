@@ -45,6 +45,7 @@ const BlockSize int = 16384
 type Block []byte
 
 func StartBTClient(ip string, port string, metadataPath string, persister *Persister) *BTClient {
+
 	cl := &BTClient{}
 
 	cl.ip = ip
