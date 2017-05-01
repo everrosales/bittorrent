@@ -9,6 +9,8 @@ For our final project for MIT's 6.824 (Distributed Systems), our team implemente
 ## Requirements
 Requires Go `1.8` or greater, for shutdown of HTTP servers.
 
+You'll also need to install http://github.com/zeebo/bencode/. In the `src` folder, run `go get github.com/zeebo/bencode`.
+
 ## Usage
 To run either the tracker or client, go in to `src/main` and run `go run main.go`. Run the tracker with flag `-tracker` and run the client with flag `-client`. Specify the `.torrent` file you want to use with `-torrent=<NAME>`. Other flags include `-debug` and `-port`. 
 
