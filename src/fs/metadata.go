@@ -23,17 +23,17 @@ type Metadata struct {
 	// easier internal representation to use
 	TrackerUrl  string
 	Name        string
-	PieceLen    uint64
+	PieceLen    int64
 	PieceHashes []string
 	Files       []FileData
 }
 
 type FileData struct {
-	Length uint64
+	Length int64
 	Path   []string
 }
 
-// Open a .torrent file and decode its contents
+// Open a .torrent file and decodne its contents
 func ReadTorrent(path string) Torrent {
 	file, err := os.Open(path)
 	if err != nil {
@@ -62,11 +62,11 @@ func Read(path string) Metadata {
 	metadata := Metadata{}
 	metadata.TrackerUrl = torrent.Announce
 	metadata.Name = torrent.Info["name"]
-	metadata.PieceLen, _ = strconv.ParseUint(torrent.Info["piece length"], 0, 64)
+	metadata.PieceLen, _ = strconv.ParseInt(torrent.Info["piece length"], 0, 64)
 	metadata.PieceHashes = util.SplitEveryN(torrent.Info["pieces"], 20)
 	if _, ok := torrent.Info["length"]; ok {
 		// single file
-		length, _ := strconv.ParseUint(torrent.Info["length"], 0, 64)
+		length, _ := strconv.ParseInt(torrent.Info["length"], 0, 64)
 		metadata.Files = []FileData{
 			FileData{
 				Length: length,
@@ -94,10 +94,10 @@ func Write(path string, data Metadata) {
 	torrent.Announce = data.TrackerUrl
 	torrent.Info = make(map[string]string)
 	torrent.Info["name"] = data.Name
-	torrent.Info["piece length"] = strconv.FormatUint(data.PieceLen, 10)
+	torrent.Info["piece length"] = strconv.FormatInt(data.PieceLen, 10)
 	torrent.Info["pieces"] = strings.Join(data.PieceHashes, "")
 	if len(data.Files) == 1 {
-		torrent.Info["length"] = strconv.FormatUint(data.Files[0].Length, 10)
+		torrent.Info["length"] = strconv.FormatInt(data.Files[0].Length, 10)
 	} else {
 		panic("currently no support for multiple files in a torrent file")
 		// // multiple files
