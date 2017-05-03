@@ -28,21 +28,8 @@ const InfoHash = "oRoSncDAfu3-cCmwPVg9CalY8_o="
 
 // Helpers
 func makeTestTracker(port int) *BTTracker {
-	util.Debug = util.None
+	util.Debug = util.Trace
 	return StartBTTracker("../main/test.torrent", port)
-}
-
-func startTest(desc string, port int) *BTTracker {
-	util.DPrintf(util.Default, desc)
-	tr := makeTestTracker(port)
-	return tr
-}
-
-func endTest(tr *BTTracker) {
-	util.Wait(1000)
-	tr.Kill()
-	util.Wait(1000)
-	util.DPrintf(util.Green, " pass\n")
 }
 
 func makeUrlWithParams(req *requestParams) string {
@@ -55,12 +42,15 @@ func makeUrlWithParams(req *requestParams) string {
 
 // Tests
 func TestMakeTracker(t *testing.T) {
-	tr := startTest("Testing basic starting and killing of tracker...", 8000)
-	endTest(tr)
+	util.StartTest("Testing basic starting and killing of tracker...")
+	tr := makeTestTracker(8000)
+	tr.Kill()
+	util.EndTest()
 }
 
 func TestBasicRequest(t *testing.T) {
-	tr := startTest("Testing basic request to tracker...", 8001)
+	util.StartTest("Testing basic request to tracker...")
+	tr := makeTestTracker(8001)
 	params := requestParams{Peer1, "", Port1, 0, 0, 300, InfoHash}
 	url := makeUrlWithParams(&params)
 	resp, err := http.Get(url)
@@ -91,7 +81,8 @@ func TestBasicRequest(t *testing.T) {
 	if me["ip"] != "::1" {
 		t.Fatalf("Missing ip")
 	}
-	endTest(tr)
+	tr.Kill()
+	util.EndTest()
 }
 
 // TODO: add tests for expected failure (e.g. missing param, non-int param)

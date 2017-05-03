@@ -1,20 +1,20 @@
 package btclient
 
-//Client
-
-import "sync"
-import "net/http"
-import "net"
-import "time"
-import "btnet"
-import "fmt"
-import "math"
-import "crypto/sha1"
-import "encoding/base64"
-import "encoding/gob"
-import "bytes"
-
-import "fs"
+import (
+	"btnet"
+	"bytes"
+	"crypto/sha1"
+	"encoding/base64"
+	"encoding/gob"
+	"fs"
+	"math"
+	"net"
+	"net/http"
+	"strconv"
+	"sync"
+	"time"
+	"util"
+)
 
 type BTClient struct {
 	mu        sync.Mutex
@@ -25,12 +25,12 @@ type BTClient struct {
 	port string
 
 	torrentPath string
-	torrent fs.Metadata
-	shutdown chan bool
+	torrent     fs.Metadata
+	shutdown    chan bool
 
-	numPieces int
-	numBlocks int
-	Pieces []Piece
+	numPieces   int
+	numBlocks   int
+	Pieces      []Piece
 	PieceBitmap []bool
 	blockBitmap map[int][]bool
 
@@ -42,14 +42,16 @@ type Piece struct {
 }
 
 const BlockSize int = 16384
+const DialTimeout = time.Millisecond * 100
+
 type Block []byte
 
-func StartBTClient(ip string, port string, metadataPath string, persister *Persister) *BTClient {
+func StartBTClient(ip string, port int, metadataPath string, persister *Persister) *BTClient {
 
 	cl := &BTClient{}
 
 	cl.ip = ip
-	cl.port = port
+	cl.port = strconv.Itoa(port)
 	cl.torrentPath = metadataPath
 	cl.torrent = fs.Read(metadataPath)
 
@@ -68,14 +70,12 @@ func StartBTClient(ip string, port string, metadataPath string, persister *Persi
 
 	cl.peers = make(map[net.Addr]btnet.Peer)
 
+	util.IPrintf("\nClient for %s listening on port %d\n", metadataPath, port)
+
 	go cl.main()
 	// cl.listenForPeers()
 
 	return cl
-}
-
-func (cl *BTClient) dialTimeout() time.Duration {
-	return time.Millisecond * 100
 }
 
 func (cl *BTClient) Kill() {
@@ -98,7 +98,7 @@ func (cl *BTClient) seed() {
 		// fmt.Println(file)
 
 		cl.mu.Unlock()
-		time.Sleep(1 * time.Second)
+		util.Wait(1000)
 	}
 }
 
@@ -109,7 +109,7 @@ func (cl *BTClient) main() {
 		if cl.checkShutdown() {
 			return
 		}
-		time.Sleep(10 * time.Millisecond)
+		util.Wait(10)
 	}
 }
 
@@ -126,7 +126,7 @@ func (cl *BTClient) checkShutdown() bool {
 }
 
 func (cl *BTClient) connectToPeer(addr string) {
-	conn, err := net.DialTimeout("tcp", addr, cl.dialTimeout())
+	conn, err := net.DialTimeout("tcp", addr, DialTimeout)
 	if err != nil {
 		// TODO: try again or mark peer as down
 	}
@@ -149,7 +149,7 @@ func (cl *BTClient) startServer() {
 	btnet.StartTCPServer(cl.ip+":"+cl.port, cl.messageHandler)
 }
 
-func (cl *BTClient) sendBlock(index int, begin int, length int, peer btnet.Peer){
+func (cl *BTClient) sendBlock(index int, begin int, length int, peer btnet.Peer) {
 	if !cl.PieceBitmap[index] {
 		// we don't have this piece yet
 		return
@@ -159,7 +159,7 @@ func (cl *BTClient) sendBlock(index int, begin int, length int, peer btnet.Peer)
 		// deny the request for simplicity
 		return
 	}
-	if begin % BlockSize != 0 {
+	if begin%BlockSize != 0 {
 		return
 	}
 	blockIndex := begin / BlockSize
@@ -167,8 +167,8 @@ func (cl *BTClient) sendBlock(index int, begin int, length int, peer btnet.Peer)
 	go cl.sendPieceMessage(peer, index, begin, length, data)
 }
 
-func (cl *BTClient) saveBlock(index int, begin int, length int, block []byte){
-	if begin % BlockSize != 0 {
+func (cl *BTClient) saveBlock(index int, begin int, length int, block []byte) {
+	if begin%BlockSize != 0 {
 		return
 	}
 	if length < BlockSize {
@@ -193,7 +193,6 @@ func (cl *BTClient) saveBlock(index int, begin int, length int, block []byte){
 	}
 }
 
-
 func (piece *Piece) hash() string {
 	allBytes := []byte{}
 	for _, block := range piece.blocks {
@@ -202,7 +201,7 @@ func (piece *Piece) hash() string {
 	hash := make([]byte, 20)
 	actualHash := sha1.Sum(allBytes)
 
-	for i := 0; i<20; i++ {
+	for i := 0; i < 20; i++ {
 		hash[i] = actualHash[i]
 	}
 	return base64.URLEncoding.EncodeToString(hash)
@@ -227,7 +226,6 @@ func (cl *BTClient) loadPieces(data []byte) {
 	d.Decode(&cl.PieceBitmap)
 }
 
-
 func allTrue(arr []bool) bool {
 	for _, entry := range arr {
 		if !entry {
@@ -237,14 +235,14 @@ func allTrue(arr []bool) bool {
 	return true
 }
 
-func (cl *BTClient) sendPieceMessage(peer btnet.Peer, index int, begin int, length int, data []byte){
+func (cl *BTClient) sendPieceMessage(peer btnet.Peer, index int, begin int, length int, data []byte) {
 	message := btnet.PeerMessage{
-		Type: btnet.Piece,
-		Index: int32(index),
-		Begin: begin,
+		Type:   btnet.Piece,
+		Index:  int32(index),
+		Begin:  begin,
 		Length: length,
-		Block: data }
-	fmt.Println(message)
+		Block:  data}
+	util.TPrintf("sending message - %v\n", message)
 	// TODO send message
 }
 
@@ -255,10 +253,10 @@ func (cl *BTClient) messageHandler(conn net.Conn) {
 	// bytesRead, err := conn.(*net.TCPConn).Read(buf)
 	// fmt.Println(bytesRead)
 	// if err != nil {
-  //   fmt.Println("hi")
+	//   fmt.Println("hi")
 	// 	fmt.Println(err)
 	// }
-  buf := btnet.ReadMessage(conn.(*net.TCPConn))
+	buf := btnet.ReadMessage(conn.(*net.TCPConn))
 
 	peerMessage := btnet.DecodePeerMessage(buf)
 	// Massive switch case that would handle incoming messages depending on message type
@@ -268,11 +266,11 @@ func (cl *BTClient) messageHandler(conn net.Conn) {
 	defer cl.mu.Unlock()
 
 	peer, ok := cl.peers[conn.RemoteAddr()]
-  if !ok {
-    // InitializePeer
-    // TODO: use the actual length len(cl.torrent.PieceHashes)
-    cl.peers[conn.RemoteAddr()] = btnet.InitializePeer(conn.RemoteAddr(), 10)
-  }
+	if !ok {
+		// InitializePeer
+		// TODO: use the actual length len(cl.torrent.PieceHashes)
+		cl.peers[conn.RemoteAddr()] = btnet.InitializePeer(conn.RemoteAddr(), 10)
+	}
 
 	switch peerMessage.Type {
 	case btnet.Choke:

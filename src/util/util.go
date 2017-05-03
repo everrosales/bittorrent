@@ -3,6 +3,7 @@ package util
 import (
 	"bytes"
 	"fmt"
+	"strings"
 	"time"
 )
 
@@ -19,26 +20,44 @@ const (
 )
 
 const (
-	Default color = ""
-	Red     color = "\033[31m"
-	Green   color = "\033[32m"
-	Yellow  color = "\033[33m"
-	Blue    color = "\033[34m"
-	Purple  color = "\033[35m"
-	Cyan    color = "\033[36m"
-	Reset   color = "\033[39m"
+	Default   color = ""
+	Underline color = "\033[4m"
+	Red       color = "\033[31m"
+	Green     color = "\033[32m"
+	Yellow    color = "\033[33m"
+	Blue      color = "\033[34m"
+	Purple    color = "\033[35m"
+	Cyan      color = "\033[36m"
+	Reset     color = "\033[0m"
 )
+
+func StartTest(desc string) {
+	if Debug != None {
+		desc = desc + "\n"
+	}
+	ColorPrintf(Underline, desc)
+}
+
+func EndTest() {
+	ColorPrintf(Green, "  pass\n")
+}
+
+// default printing
+func Printf(format string, a ...interface{}) (n int, err error) {
+	ColorPrintf(Default, format, a...)
+	return
+}
 
 // error logging
 func EPrintf(format string, a ...interface{}) (n int, err error) {
-	DPrintf(Red, "[ERROR] "+format, a...)
+	ColorPrintf(Red, "[ERROR] "+format, a...)
 	return
 }
 
 // info logging
 func IPrintf(format string, a ...interface{}) (n int, err error) {
 	if Debug <= Info {
-		DPrintf(Blue, format, a...)
+		ColorPrintf(Blue, format, a...)
 	}
 	return
 }
@@ -46,13 +65,14 @@ func IPrintf(format string, a ...interface{}) (n int, err error) {
 // trace logging
 func TPrintf(format string, a ...interface{}) (n int, err error) {
 	if Debug <= Trace {
-		DPrintf(Default, format, a...)
+		format = strings.Replace(format, "\n", "\n    ", strings.Count(format, "\n")-1)
+		ColorPrintf(Default, "    "+format, a...)
 	}
 	return
 }
 
 // generic printing with color
-func DPrintf(c color, format string, a ...interface{}) (n int, err error) {
+func ColorPrintf(c color, format string, a ...interface{}) (n int, err error) {
 	str := string(c) + format + string(Reset)
 	fmt.Printf(str, a...)
 	return
@@ -98,16 +118,4 @@ func SplitEveryN(s string, n int) []string {
 	}
 
 	return subs
-}
-
-func TestStartPrintf(format string, a ...interface{}) {
-  str := "----------------\n" + format
-  fmt.Printf(str, a...)
-  return
-}
-
-func TestFinishPrintf(format string, a ...interface{}) {
-  str := format + "----------------\n"
-  fmt.Printf(str, a...)
-  return
 }

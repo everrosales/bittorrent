@@ -5,7 +5,6 @@ package fs
 import (
 	"crypto/sha1"
 	"encoding/base64"
-	"fmt"
 	"github.com/zeebo/bencode"
 	"os"
 	"strings"
@@ -121,10 +120,4 @@ func Write(path string, data Metadata) {
 		panic(err)
 	}
 	file.Close()
-}
-
-func main() {
-	file := FileData{Length: 1234}
-	Write("test.torrent", Metadata{"blah", "blah", 1, []string{"aaaaaaaaaaaaaaaaaaaa", "bbbbbbbbbbbbbbbbbbbb"}, []FileData{file}})
-	fmt.Println("%v", Read("test.torrent"))
 }
