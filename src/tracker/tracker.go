@@ -17,6 +17,8 @@ const (
 	Empty     peerStatus = "empty"
 )
 
+const MaxPeers = 50
+
 // private tracker's peer state
 type peer struct {
 	peerId     string
@@ -72,9 +74,14 @@ func (tr *BTTracker) CheckShutdown() bool {
 
 func (tr *BTTracker) getPeers() []map[string]string {
 	peers := [](map[string]string){}
+	count := 0
 	for _, v := range tr.peers {
 		p := map[string]string{"peer id": v.peerId, "ip": v.ip, "port": strconv.Itoa(v.port)}
 		peers = append(peers, p)
+		count += 1
+		if count == MaxPeers {
+			return peers
+		}
 	}
 	return peers
 }
