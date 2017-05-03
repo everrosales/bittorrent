@@ -24,7 +24,7 @@ const Peer1 = "aaaaaaaaaaaaaaaaaaaa"
 const Peer2 = "bbbbbbbbbbbbbbbbbbbb"
 const Port1 = "6882"
 const Port2 = "6883"
-const InfoHash = "fjm2CfSuEB9m5HqNDp4ZBMi-_FE="
+const InfoHash = "oRoSncDAfu3-cCmwPVg9CalY8_o="
 
 // Helpers
 func makeTestTracker(port int) *BTTracker {

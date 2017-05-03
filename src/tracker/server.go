@@ -99,7 +99,7 @@ func IndexHandler(tr *BTTracker, w http.ResponseWriter, r *http.Request) (int, e
 }
 
 func (tr *BTTracker) main(port int) {
-	util.IPrintf("\nTracker for %s listening on port %d\n", tr.file, port)
+	util.IPrintf("\nTracker for %s listening on port %d - infohash %s\n", tr.file, port, tr.infoHash)
 	portStr := ":" + strconv.Itoa(port)
 
 	tr.mu.Lock()
