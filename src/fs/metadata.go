@@ -5,8 +5,7 @@ package fs
 import (
 	"crypto/sha1"
 	"encoding/base64"
-	"github.com/zeebo/bencode"
-	"os"
+	"io/ioutil"
 	"strings"
 	"util"
 )
@@ -33,24 +32,23 @@ type FileData struct {
 
 // Open a .torrent file and decodne its contents
 func ReadTorrent(path string) Torrent {
-	file, err := os.Open(path)
+	fileBytes, err := ioutil.ReadFile(path)
 	if err != nil {
 		panic(err)
 	}
-	dec := bencode.NewDecoder(file)
 	torrent := Torrent{}
-	dec.Decode(&torrent)
+	Decode(string(fileBytes), &torrent)
 	if len(torrent.Info) == 0 {
 		// empty torrent
 		panic("Torrent " + path + " was empty or not decoded properly")
 	}
-	file.Close()
 	return torrent
 }
 
 // Get escaped string of SHA1 hash of torrent's info field
 func GetInfoHash(torrent Torrent) string {
-	bytes := GetBytes(torrent.Info)
+	bencodedStr := Encode(torrent.Info)
+	bytes := GetBytes(bencodedStr)
 	h := sha1.New()
 	h.Write(bytes)
 	sha := base64.URLEncoding.EncodeToString(h.Sum(nil))
@@ -110,14 +108,9 @@ func Write(path string, data Metadata) {
 		// }
 		// torrent.Info["files"] = Encode(files)
 	}
-	file, err := os.Create(path)
+	outBytes := []byte(Encode(torrent))
+	err := ioutil.WriteFile(path, outBytes, 0644)
 	if err != nil {
 		panic(err)
 	}
-	enc := bencode.NewEncoder(file)
-	err = enc.Encode(torrent)
-	if err != nil {
-		panic(err)
-	}
-	file.Close()
 }
