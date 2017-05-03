@@ -1,7 +1,7 @@
 package main
 
 import (
-	//"client"
+	"client"
 	"flag"
 	"tracker"
 	"util"
@@ -50,7 +50,11 @@ func main() {
 		}
 		return
 	} else if *clientFlag {
-		// TODO: start client
+		// StartBTClient(ip string, port int, metadataPath string, persister *Persister)
+		cl := btclient.StartBTClient("localhost", *portFlag, *fileFlag, btclient.MakePersister(*fileFlag+"_download"))
+		for !cl.CheckShutdown() {
+		}
+		return
 	}
 
 }

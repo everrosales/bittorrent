@@ -12,14 +12,14 @@ type Persister struct {
 	path string
 }
 
-func MakePersister() *Persister {
-	return &Persister{}
+func MakePersister(path string) *Persister {
+	return &Persister{path: path}
 }
 
 func (ps *Persister) Copy() *Persister {
 	ps.mu.Lock()
 	defer ps.mu.Unlock()
-	np := MakePersister()
+	np := MakePersister(ps.path)
 	np.state = ps.state
 	return np
 }

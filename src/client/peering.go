@@ -10,6 +10,9 @@ import (
 	"net/http"
 	"time"
 	"util"
+	"strconv"
+	"errors"
+	"io/ioutil"
 )
 
 type Block []byte
@@ -25,9 +28,41 @@ func (cl *BTClient) startServer() {
 	btnet.StartTCPServer(cl.ip+":"+cl.port, cl.messageHandler)
 }
 
+type requestParams struct {
+	peerId     string
+	ip         string
+	port       string
+	uploaded   int
+	downloaded int
+	left       int
+	infoHash   string
+}
+
+func sendRequest(addr string, req *requestParams) ([]byte, error) {
+	url := addr + "/?peer_id=" + req.peerId +
+		"&port=" + req.port + "&ip=" + req.ip + "&uploaded=" +
+		strconv.Itoa(req.uploaded) + "&downloaded=" + strconv.Itoa(req.downloaded) +
+		"&left=" + strconv.Itoa(req.left) + "&info_hash=" + req.infoHash
+	resp, err := http.Get(url)
+	if err != nil {
+		return nil, errors.New("Error sending request")
+	}
+	if resp.Status != "200 OK" {
+		return nil, errors.New("Wrong response status code")
+	}
+	bodyBytes, err2 := ioutil.ReadAll(resp.Body)
+	if err2 != nil {
+		return nil, errors.New("Failure reading response body")
+	}
+	return bodyBytes, nil
+}
+
 func (cl *BTClient) contactTracker(url string) {
 	// TODO: fill this in
-	http.Get(url)
+	util.IPrintf("contacting tracker at %s", url)
+	res, err := sendRequest(url, &requestParams{})
+	util.IPrintf("res %s", res)
+	util.IPrintf("err %v", err)
 }
 
 // func (cl *BTClient) listenForPeers() {
@@ -39,7 +74,7 @@ func (cl *BTClient) contactTracker(url string) {
 
 func (cl *BTClient) seed() {
 	for {
-		if cl.checkShutdown() {
+		if cl.CheckShutdown() {
 			return
 		}
 		cl.mu.Lock()

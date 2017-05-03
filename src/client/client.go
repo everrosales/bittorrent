@@ -68,7 +68,7 @@ func (cl *BTClient) Kill() {
 }
 
 // returns true if the client has been ordered to shut down
-func (cl *BTClient) checkShutdown() bool {
+func (cl *BTClient) CheckShutdown() bool {
 	select {
 	case _, ok := <-cl.shutdown:
 		if !ok {
@@ -83,7 +83,7 @@ func (cl *BTClient) main() {
 	go cl.seed()
 	cl.startServer()
 	for {
-		if cl.checkShutdown() {
+		if cl.CheckShutdown() {
 			return
 		}
 		util.Wait(10)
