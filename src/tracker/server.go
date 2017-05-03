@@ -99,7 +99,6 @@ func IndexHandler(tr *BTTracker, w http.ResponseWriter, r *http.Request) (int, e
 }
 
 func (tr *BTTracker) main(port int) {
-	util.IPrintf("\nTracker for %s listening on port %d - infohash %s\n", tr.file, port, tr.infoHash)
 	portStr := ":" + strconv.Itoa(port)
 
 	tr.mu.Lock()
@@ -111,7 +110,7 @@ func (tr *BTTracker) main(port int) {
 		for {
 			if tr.CheckShutdown() {
 				tr.srv.Close()
-				util.IPrintf("Shutting down tracker...\n")
+				util.IPrintf("Shutting down tracker on port %d...\n", tr.port)
 				return
 			}
 			util.Wait(10)

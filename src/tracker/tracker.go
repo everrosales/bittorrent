@@ -5,6 +5,7 @@ import (
 	"net/http"
 	"strconv"
 	"sync"
+	"util"
 )
 
 type peerStatus string
@@ -33,6 +34,7 @@ type BTTracker struct {
 	infoHash string
 	mu       sync.Mutex
 	peers    map[string]peer
+	port     int
 	shutdown chan bool
 	srv      *http.Server
 }
@@ -41,10 +43,13 @@ type BTTracker struct {
 func StartBTTracker(path string, port int) *BTTracker {
 	tr := &BTTracker{}
 	tr.file = path
+	tr.port = port
 	tr.peers = make(map[string]peer)
 	tr.shutdown = make(chan bool)
 	torrent := fs.ReadTorrent(path)
 	tr.infoHash = fs.GetInfoHash(torrent)
+
+	util.IPrintf("Tracker for %s listening on port %d - infohash %s\n", tr.file, port, tr.infoHash)
 	go tr.main(port)
 	return tr
 }
