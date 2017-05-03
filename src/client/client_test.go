@@ -9,7 +9,7 @@ import "fmt"
 
 func makeTestClient(port string) *BTClient {
   persister := MakePersister()
-  return StartBTClient("localhost", "6666", "../main/test.torrent", persister)
+  return StartBTClient("localhost", port, "../main/test.torrent", persister)
 }
 
 func TestMakeClient(t *testing.T) {

@@ -66,6 +66,8 @@ func StartBTClient(ip string, port string, metadataPath string, persister *Persi
 	cl.blockBitmap = make(map[int][]bool)
 	cl.loadPieces(persister.ReadState())
 
+	cl.peers = make(map[net.Addr]btnet.Peer)
+
 	go cl.main()
 	// cl.listenForPeers()
 
