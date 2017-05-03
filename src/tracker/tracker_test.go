@@ -26,11 +26,14 @@ const Peer1 = "aaaaaaaaaaaaaaaaaaaa"
 const Peer2 = "bbbbbbbbbbbbbbbbbbbb"
 const Port1 = "6882"
 const Port2 = "6883"
-const InfoHash = "oRoSncDAfu3-cCmwPVg9CalY8_o="
+const InfoHash = "HmbK7rlK8tBmNJtShTaW23s-H_Q="
+
+func init() {
+	util.Debug = util.None
+}
 
 // Helpers
 func makeTestTracker(port int) *BTTracker {
-	util.Debug = util.Trace
 	return StartBTTracker("../main/test.torrent", port)
 }
 
