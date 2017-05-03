@@ -8,7 +8,6 @@ import (
 	"fmt"
 	"github.com/zeebo/bencode"
 	"os"
-	"strconv"
 	"strings"
 	"util"
 )
@@ -16,7 +15,7 @@ import (
 type Torrent struct {
 	// according to bittorrent spec
 	Announce string
-	Info     map[string]string
+	Info     map[string]interface{}
 }
 
 type Metadata struct {
@@ -42,6 +41,10 @@ func ReadTorrent(path string) Torrent {
 	dec := bencode.NewDecoder(file)
 	torrent := Torrent{}
 	dec.Decode(&torrent)
+	if len(torrent.Info) == 0 {
+		// empty torrent
+		panic("Torrent " + path + " was empty or not decoded properly")
+	}
 	file.Close()
 	return torrent
 }
@@ -58,18 +61,16 @@ func GetInfoHash(torrent Torrent) string {
 // Given a file path, read the info field into a Metadata struct
 func Read(path string) Metadata {
 	torrent := ReadTorrent(path)
-
 	metadata := Metadata{}
 	metadata.TrackerUrl = torrent.Announce
-	metadata.Name = torrent.Info["name"]
-	metadata.PieceLen, _ = strconv.ParseInt(torrent.Info["piece length"], 0, 64)
-	metadata.PieceHashes = util.SplitEveryN(torrent.Info["pieces"], 20)
+	metadata.Name = torrent.Info["name"].(string)
+	metadata.PieceLen, _ = torrent.Info["piece length"].(int64)
+	metadata.PieceHashes = util.SplitEveryN(torrent.Info["pieces"].(string), 20)
 	if _, ok := torrent.Info["length"]; ok {
 		// single file
-		length, _ := strconv.ParseInt(torrent.Info["length"], 0, 64)
 		metadata.Files = []FileData{
 			FileData{
-				Length: length,
+				Length: torrent.Info["length"].(int64),
 				Path:   []string{}}}
 	} else {
 		panic("currently no support for multiple files in a torrent file")
@@ -92,12 +93,12 @@ func Read(path string) Metadata {
 func Write(path string, data Metadata) {
 	torrent := Torrent{}
 	torrent.Announce = data.TrackerUrl
-	torrent.Info = make(map[string]string)
+	torrent.Info = make(map[string]interface{})
 	torrent.Info["name"] = data.Name
-	torrent.Info["piece length"] = strconv.FormatInt(data.PieceLen, 10)
+	torrent.Info["piece length"] = data.PieceLen
 	torrent.Info["pieces"] = strings.Join(data.PieceHashes, "")
 	if len(data.Files) == 1 {
-		torrent.Info["length"] = strconv.FormatInt(data.Files[0].Length, 10)
+		torrent.Info["length"] = data.Files[0].Length
 	} else {
 		panic("currently no support for multiple files in a torrent file")
 		// // multiple files

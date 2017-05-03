@@ -57,7 +57,7 @@ func StartBTClient(ip string, port string, metadataPath string, persister *Persi
 	cl.shutdown = make(chan bool)
 
 	cl.numPieces = len(cl.torrent.PieceHashes)
-	cl.numBlocks = int(math.Ceil(float64(cl.torrent.PieceLen / uint64(BlockSize))))
+	cl.numBlocks = int(math.Ceil(float64(cl.torrent.PieceLen / int64(BlockSize))))
 	cl.Pieces = make([]Piece, cl.numPieces, cl.numPieces)
 	for _, piece := range cl.Pieces {
 		piece.blocks = make([]Block, cl.numBlocks, cl.numBlocks)
