@@ -5,9 +5,11 @@ import (
 	"net/http"
 	"strconv"
 	"sync"
+	"time"
 	"util"
 )
 
+type peerId string
 type peerStatus string
 
 const (
@@ -18,16 +20,18 @@ const (
 )
 
 const MaxPeers = 50
+const PeerWaitTime = time.Duration(10) * time.Second
 
 // private tracker's peer state
 type peer struct {
-	peerId     string
+	peerId     peerId
 	ip         string
 	port       int
 	uploaded   int
 	downloaded int
 	left       int
 	status     peerStatus
+	lastSeen   time.Time
 }
 
 // tracker state
@@ -35,7 +39,7 @@ type BTTracker struct {
 	file     string
 	infoHash string
 	mu       sync.Mutex
-	peers    map[string]peer
+	peers    map[peerId]peer
 	port     int
 	shutdown chan bool
 	srv      *http.Server
@@ -46,13 +50,14 @@ func StartBTTracker(path string, port int) *BTTracker {
 	tr := &BTTracker{}
 	tr.file = path
 	tr.port = port
-	tr.peers = make(map[string]peer)
+	tr.peers = make(map[peerId]peer)
 	tr.shutdown = make(chan bool)
 	torrent := fs.ReadTorrent(path)
 	tr.infoHash = fs.GetInfoHash(torrent)
 
 	util.IPrintf("Tracker for %s listening on port %d - infohash %s\n", tr.file, port, tr.infoHash)
 	go tr.main(port)
+	go tr.watchPeers()
 	return tr
 }
 
@@ -72,18 +77,32 @@ func (tr *BTTracker) CheckShutdown() bool {
 	return false
 }
 
-func (tr *BTTracker) getPeers() []map[string]string {
-	peers := [](map[string]string){}
+func (tr *BTTracker) getPeerList() []map[string]string {
+	peerList := [](map[string]string){}
 	count := 0
+
 	for _, v := range tr.peers {
-		p := map[string]string{"peer id": v.peerId, "ip": v.ip, "port": strconv.Itoa(v.port)}
-		peers = append(peers, p)
+		p := map[string]string{"peer id": string(v.peerId), "ip": v.ip, "port": strconv.Itoa(v.port)}
+		peerList = append(peerList, p)
 		count += 1
 		if count == MaxPeers {
-			return peers
+			return peerList
 		}
 	}
-	return peers
+	return peerList
 }
 
 // TODO: set timeout for peers in list
+func (tr *BTTracker) watchPeers() {
+	for {
+		timeNow := time.Now()
+		tr.mu.Lock()
+		for k, v := range tr.peers {
+			if timeNow.After((v.lastSeen).Add(PeerWaitTime)) {
+				delete(tr.peers, k)
+			}
+		}
+		tr.mu.Unlock()
+		util.Wait(1000)
+	}
+}

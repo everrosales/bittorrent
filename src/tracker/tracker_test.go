@@ -13,7 +13,7 @@ import (
 )
 
 type requestParams struct {
-	peerId     string
+	peerIdStr  string
 	ip         string
 	port       string
 	uploaded   int
@@ -25,8 +25,10 @@ type requestParams struct {
 const BaseStr = "http://localhost:"
 const Peer1 = "aaaaaaaaaaaaaaaaaaaa"
 const Peer2 = "bbbbbbbbbbbbbbbbbbbb"
+const Peer3 = "cccccccccccccccccccc"
 const Port1 = "6882"
 const Port2 = "6883"
+const Port3 = "6884"
 const InfoHash = "HmbK7rlK8tBmNJtShTaW23s-H_Q="
 const BetweenTests = 50
 
@@ -46,9 +48,9 @@ func min(a int, b int) int {
 	return b
 }
 
-func findPeer(peerId string, peers []map[string]string) (map[string]string, error) {
+func findPeer(peerIdStr string, peers []map[string]string) (map[string]string, error) {
 	for _, e := range peers {
-		if e["peer id"] == peerId {
+		if e["peer id"] == peerIdStr {
 			return e, nil
 		}
 	}
@@ -56,7 +58,7 @@ func findPeer(peerId string, peers []map[string]string) (map[string]string, erro
 }
 
 func sendRequest(port int, req *requestParams) ([]byte, error) {
-	url := BaseStr + strconv.Itoa(port) + "/?peer_id=" + req.peerId +
+	url := BaseStr + strconv.Itoa(port) + "/?peer_id=" + req.peerIdStr +
 		"&port=" + req.port + "&ip=" + req.ip + "&uploaded=" +
 		strconv.Itoa(req.uploaded) + "&downloaded=" + strconv.Itoa(req.downloaded) +
 		"&left=" + strconv.Itoa(req.left) + "&info_hash=" + req.infoHash
@@ -225,8 +227,8 @@ func TestManyPeers(t *testing.T) {
 	var err error
 	baseStr := "aaaaaaaaaaaaaaa"
 	for i := 0; i < 50; i++ {
-		peerId := baseStr + fmt.Sprintf("%05d", i)
-		params = requestParams{peerId, "", Port1, 0, 0, 300, InfoHash}
+		peerIdStr := baseStr + fmt.Sprintf("%05d", i)
+		params = requestParams{peerIdStr, "", Port1, 0, 0, 300, InfoHash}
 		bodyBytes, err = sendRequest(8006, &params)
 		if err != nil {
 			tr.Kill()
@@ -234,15 +236,15 @@ func TestManyPeers(t *testing.T) {
 		}
 		respS = SuccessResponse{}
 		fs.Decode(string(bodyBytes), &respS)
-		_, err = findPeer(peerId, respS.Peers)
+		_, err = findPeer(peerIdStr, respS.Peers)
 		if len(respS.Peers) != i+1 || err != nil {
 			tr.Kill()
 			t.Fatalf("Expected %d peers, got %d\n", i+1, len(respS.Peers))
 		}
 	}
 	for i := 0; i < 50; i++ {
-		peerId := baseStr + fmt.Sprintf("%05d", i)
-		params = requestParams{peerId, "", Port1, 0, 0, 300, InfoHash}
+		peerIdStr := baseStr + fmt.Sprintf("%05d", i+50)
+		params = requestParams{peerIdStr, "", Port1, 0, 0, 300, InfoHash}
 		bodyBytes, err = sendRequest(8006, &params)
 		if err != nil {
 			tr.Kill()
@@ -250,7 +252,7 @@ func TestManyPeers(t *testing.T) {
 		}
 		respS = SuccessResponse{}
 		fs.Decode(string(bodyBytes), &respS)
-		_, err = findPeer(peerId, respS.Peers)
+		_, err = findPeer(peerIdStr, respS.Peers)
 		if len(respS.Peers) != 50 {
 			tr.Kill()
 			t.Fatalf("Expected %d peers, got %d\n", 50, len(respS.Peers))
@@ -263,3 +265,129 @@ func TestManyPeers(t *testing.T) {
 }
 
 // TODO: add tests for peer heartbeats
+func TestMultiplePeersTimeout(t *testing.T) {
+	util.StartTest("Testing multiple peers with timeout...")
+	var err1, err2, err3 error
+	tr := makeTestTracker(8007)
+	params := requestParams{Peer1, "", Port1, 0, 0, 300, InfoHash}
+	bodyBytes, err := sendRequest(8007, &params)
+	if err != nil {
+		tr.Kill()
+		t.Fatalf("%s\n", err.Error())
+	}
+	respS := SuccessResponse{}
+	fs.Decode(string(bodyBytes), &respS)
+	_, err1 = findPeer(Peer1, respS.Peers)
+	if len(respS.Peers) != 1 || err1 != nil {
+		tr.Kill()
+		t.Fatalf("Expected 1 peer, got %d\n", len(respS.Peers))
+	}
+
+	params = requestParams{Peer2, "", Port2, 0, 0, 300, InfoHash}
+	bodyBytes, err = sendRequest(8007, &params)
+	if err != nil {
+		tr.Kill()
+		t.Fatalf("%s\n", err.Error())
+	}
+	respS = SuccessResponse{}
+	fs.Decode(string(bodyBytes), &respS)
+	_, err1 = findPeer(Peer1, respS.Peers)
+	_, err2 = findPeer(Peer2, respS.Peers)
+	if len(respS.Peers) != 2 || err1 != nil || err2 != nil {
+		tr.Kill()
+		t.Fatalf("Expected 2 peer, got %d\n", len(respS.Peers))
+	}
+
+	params = requestParams{Peer3, "", Port3, 0, 0, 300, InfoHash}
+	bodyBytes, err = sendRequest(8007, &params)
+	if err != nil {
+		tr.Kill()
+		t.Fatalf("%s\n", err.Error())
+	}
+	respS = SuccessResponse{}
+	fs.Decode(string(bodyBytes), &respS)
+	_, err1 = findPeer(Peer1, respS.Peers)
+	_, err2 = findPeer(Peer2, respS.Peers)
+	_, err3 = findPeer(Peer3, respS.Peers)
+	if len(respS.Peers) != 3 || err1 != nil || err2 != nil || err3 != nil {
+		tr.Kill()
+		t.Fatalf("Expected 3 peers, got %d\n", len(respS.Peers))
+	}
+
+	util.TPrintf("Waiting 11 seconds...\n")
+	util.Wait(11000)
+
+	params = requestParams{Peer2, "", Port2, 0, 0, 300, InfoHash}
+	bodyBytes, err = sendRequest(8007, &params)
+	if err != nil {
+		tr.Kill()
+		t.Fatalf("%s\n", err.Error())
+	}
+	respS = SuccessResponse{}
+	fs.Decode(string(bodyBytes), &respS)
+	_, err1 = findPeer(Peer1, respS.Peers)
+	_, err2 = findPeer(Peer2, respS.Peers)
+	_, err3 = findPeer(Peer3, respS.Peers)
+	if len(respS.Peers) != 1 || err1 == nil || err2 != nil || err3 == nil {
+		tr.Kill()
+		t.Fatalf("Expected 1 peer, got %d\n", len(respS.Peers))
+	}
+
+	params = requestParams{Peer3, "", Port3, 0, 0, 300, InfoHash}
+	bodyBytes, err = sendRequest(8007, &params)
+	if err != nil {
+		tr.Kill()
+		t.Fatalf("%s\n", err.Error())
+	}
+	respS = SuccessResponse{}
+	fs.Decode(string(bodyBytes), &respS)
+	_, err1 = findPeer(Peer1, respS.Peers)
+	_, err2 = findPeer(Peer2, respS.Peers)
+	_, err3 = findPeer(Peer3, respS.Peers)
+	if len(respS.Peers) != 2 || err1 == nil || err2 != nil || err3 != nil {
+		tr.Kill()
+		t.Fatalf("Expected 2 peers, got %d\n", len(respS.Peers))
+	}
+
+	util.TPrintf("Waiting 5 seconds...\n")
+	util.Wait(5000)
+
+	params = requestParams{Peer2, "", Port2, 0, 0, 300, InfoHash}
+	bodyBytes, err = sendRequest(8007, &params)
+	if err != nil {
+		tr.Kill()
+		t.Fatalf("%s\n", err.Error())
+	}
+	respS = SuccessResponse{}
+	fs.Decode(string(bodyBytes), &respS)
+	_, err1 = findPeer(Peer1, respS.Peers)
+	_, err2 = findPeer(Peer2, respS.Peers)
+	_, err3 = findPeer(Peer3, respS.Peers)
+	if len(respS.Peers) != 2 || err1 == nil || err2 != nil || err3 != nil {
+		tr.Kill()
+		t.Fatalf("Expected 2 peers, got %d\n", len(respS.Peers))
+	}
+
+	util.TPrintf("Waiting 6 seconds...\n")
+	util.Wait(6000)
+
+	params = requestParams{Peer2, "", Port2, 0, 0, 300, InfoHash}
+	bodyBytes, err = sendRequest(8007, &params)
+	if err != nil {
+		tr.Kill()
+		t.Fatalf("%s\n", err.Error())
+	}
+	respS = SuccessResponse{}
+	fs.Decode(string(bodyBytes), &respS)
+	_, err1 = findPeer(Peer1, respS.Peers)
+	_, err2 = findPeer(Peer2, respS.Peers)
+	_, err3 = findPeer(Peer3, respS.Peers)
+	if len(respS.Peers) != 1 || err1 == nil || err2 != nil || err3 == nil {
+		tr.Kill()
+		t.Fatalf("Expected 1 peer, got %d\n", len(respS.Peers))
+	}
+
+	tr.Kill()
+	util.Wait(BetweenTests)
+	util.EndTest()
+}
