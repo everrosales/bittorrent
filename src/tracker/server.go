@@ -22,12 +22,12 @@ type appHandler struct {
 }
 
 type SuccessResponse struct {
-	Interval int
-	Peers    []map[string]string
+	Interval int                 `bencode:"interval"`
+	Peers    []map[string]string `bencode:"peers"`
 }
 
 type FailureResponse struct {
-	Failure string
+	Failure string `bencode:"failure reason"`
 }
 
 func writeSuccess(w http.ResponseWriter, interval int, peers []map[string]string) (int, error) {

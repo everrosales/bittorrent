@@ -4,12 +4,12 @@ package fs
 
 import (
 	"bytes"
-	"encoding/gob"
+	//"encoding/gob"
 	"github.com/zeebo/bencode"
 )
 
 // encode interface into a bencoded string
-func GetBytes(data interface{}) []byte {
+/*func GetBytes(data interface{}) []byte {
 	var b bytes.Buffer
 	enc := gob.NewEncoder(&b)
 	err := enc.Encode(data)
@@ -17,7 +17,7 @@ func GetBytes(data interface{}) []byte {
 		panic(err)
 	}
 	return b.Bytes()
-}
+}*/
 
 // encode interface to bencoded string
 func Encode(obj interface{}) string {

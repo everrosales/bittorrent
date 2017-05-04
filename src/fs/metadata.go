@@ -4,8 +4,9 @@ package fs
 
 import (
 	"crypto/sha1"
-	"encoding/base64"
+	//"encoding/base64"
 	"io/ioutil"
+	"net/url"
 	"strings"
 	"util"
 )
@@ -48,11 +49,13 @@ func ReadTorrent(path string) Torrent {
 // Get escaped string of SHA1 hash of torrent's info field
 func GetInfoHash(torrent Torrent) string {
 	bencodedStr := Encode(torrent.Info)
-	bytes := GetBytes(bencodedStr)
-	h := sha1.New()
-	h.Write(bytes)
-	sha := base64.URLEncoding.EncodeToString(h.Sum(nil))
-	return sha
+	sha := sha1.Sum([]byte(bencodedStr))
+	n := len(sha)
+	if n != 20 {
+		panic("SHA hash generation failed")
+	}
+	shaStr := string(sha[:n])
+	return url.QueryEscape(shaStr)
 }
 
 // Given a file path, read the info field into a Metadata struct
