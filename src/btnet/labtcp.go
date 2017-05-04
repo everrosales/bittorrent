@@ -39,6 +39,50 @@ func DoDial(addr *net.TCPAddr, data []byte) *net.TCPConn {
 	// return ReadMessage(conn)
 }
 
+func ReadHandshake(conn *net.TCPConn) []byte {
+  // General strategy for reading handshakes
+	// 1) The first byte for the length of the pstr
+	// 2) Read that many bytes after to form a packet + 49
+	// 3) Hope that nothing goes out of sync
+	// 4) Check that the packets are reasonable
+	// 5) repeat 3
+
+	reader := bufio.NewReader(conn)
+
+	// Grab the first 4 bytes
+	msgLength := make([]byte, 1)
+	response, err := reader.ReadByte()
+	if err != nil {
+		util.EPrintf("labtcp ReadMessage: %s\n", err)
+	}
+	msgLength[0] = response
+
+	util.TPrintf("msglength: %v\n", msgLength)
+	// Parse the length of the message
+	var length int8
+	msgLengthDecodeBuf := bytes.NewReader(msgLength)
+	errBinary := binary.Read(msgLengthDecodeBuf, binary.BigEndian, &length)
+	if errBinary != nil {
+		util.EPrintf("labtcp ReadMessage: %s\n", errBinary)
+	}
+	util.TPrintf("length: %d\n", int(length))
+
+	// Cross fingers
+	// Read the number of bytes specified by length and hope it doesnt go out of sync
+	msgbuf := make([]byte, int(length) + 48)
+	for i := 0; i < int(length) + 48; i++ {
+		response, err := reader.ReadByte()
+		if err != nil {
+			util.EPrintf("labtcp ReadMessage: %s\n", err.Error())
+			break
+		}
+		msgbuf[i] = response
+	}
+
+	responseData := append(msgLength, msgbuf...)
+	return responseData
+}
+
 func ReadMessage(conn *net.TCPConn) []byte {
 	// General strategy for reading packets back
 	// 1) The first four bytes for the length of the packets
