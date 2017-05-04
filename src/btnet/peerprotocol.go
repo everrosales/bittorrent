@@ -76,10 +76,14 @@ func InitializePeer(addr *net.TCPAddr, infoHash string, peerId string, bitfieldL
   peer.KeepAlive = make(chan bool, 100)
   // Create handshake
   // Handshake{Pstr: BT_PROTOCOL, InfoHash: []byte(infoHash), PeerId: []byte(peerId)}
-  data := EncodeHandshake(Handshake{Pstr: BT_PROTOCOL, InfoHash: []byte(infoHash), PeerId: []byte(peerId)})
   if (conn != nil) {
     peer.Conn = *conn
+    // This happens if we are not the ones initializing the communication
+    data := ReadHandshake(peer.Conn)
+    handshake := DecodeHandshake(data)
+    // TODO: Process the handshake and drop connection if needed
   } else {
+    data := EncodeHandshake(Handshake{Pstr: BT_PROTOCOL, InfoHash: []byte(infoHash), PeerId: []byte(peerId)})
     peer.Conn = *DoDial(addr, data)
   }
 
@@ -87,8 +91,29 @@ func InitializePeer(addr *net.TCPAddr, infoHash string, peerId string, bitfieldL
 }
 
 func DecodeHandshake(data []byte) Handshake {
+  pstrbuf := make([]byte, 1)
+  pstrbuf[0] = data[0]
+  var pstrLen int8
+  pstrLenDecodeBuf := bytes.NewReader(pstrbuf)
+  errBinary := binary.Read(pstrLenDecodeBuf, binary.BigEndian, &pstrLen)
+  if errBinary != nil {
+    util.EPrintf("labtcp DecodeHandshake: %s\n", errBinary)
+  }
+  util.TPrintf("pstrLen: %d\n", pstrLen)
 
-  return Handshake{}
+  // Decode pstr
+  pstr := string(data[1:int(pstrLen) + 1])
+  util.TPrintf("pstr: %s\n", pstr)
+
+  // Decode infoHash
+  infoHashIndex := pstrLen + 9
+  infoHash := []byte(data[infoHashIndex: infoHashIndex + 20])
+
+  // Decode peerId
+  peerIdIndex := infoHashIndex + 20
+  peerId := []byte(data[peerIdIndex: peerIdIndex + 20])
+
+  return Handshake{Pstr: pstr, InfoHash: infoHash, PeerId: peerId}
 }
 
 func EncodeHandshake(handshake Handshake) []byte {

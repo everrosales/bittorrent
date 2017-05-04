@@ -5,6 +5,14 @@ import (
 	"util"
 )
 
+var HandshakeMsg Handshake = Handshake{
+  Pstr: "BitTorrent protocol",
+  InfoHash: []byte{0x00, 0x01, 0x02, 0x03, 0x04, 0x05, 0x06, 0x07, 0x08, 0x09,
+                   0x10, 0x11, 0x12, 0x13, 0x14, 0x15, 0x16, 0x17, 0x18, 0x19},
+  PeerId: []byte{0x10, 0x11, 0x12, 0x13, 0x14, 0x15, 0x16, 0x17, 0x18, 0x19,
+                 0x00, 0x01, 0x02, 0x03, 0x04, 0x05, 0x06, 0x07, 0x08, 0x09}}
+
+
 // Byte encodings of messages
 var KeepAliveBytes []byte = []byte{0x00, 0x00, 0x00, 0x00}
 var ChokeBytes []byte = []byte{0x00, 0x00, 0x00, 0x01, 0x00}
@@ -28,6 +36,23 @@ func init() {
 func TestProcessMessage(t *testing.T) {
 	// data := []byte{0x00, 0x00, 0x00, 0x01, 0x2d, 0x44, 0x54, 0xfb, 0x21, 0x09, 0x40}
 	// ProcessMessage(data);
+}
+
+func TestEncodeDecodeHandshake(t *testing.T) {
+  util.StartTest("Testing EncodeDecodeHandshake...")
+  handshake := HandshakeMsg
+  data := EncodeHandshake(handshake)
+  decodedHandshake := DecodeHandshake(data)
+  if (!util.ByteArrayEquals(handshake.InfoHash, decodedHandshake.InfoHash) ||
+      !util.ByteArrayEquals(handshake.PeerId, decodedHandshake.PeerId) ||
+      handshake.Pstr != decodedHandshake.Pstr) {
+    t.Fail()
+  }
+  util.EndTest()
+}
+
+func TestDecodeHandshake(t *testing.T) {
+
 }
 
 func TestDecodeKeepAliveMessage(t *testing.T) {

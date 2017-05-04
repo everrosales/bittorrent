@@ -213,7 +213,7 @@ func (cl *BTClient) SendPeerMessage(addr *net.TCPAddr, message btnet.PeerMessage
     peerId := ""
     bitfieldLength := 0
     peer := btnet.InitializePeer(addr, infoHash, peerId, bitfieldLength, nil)
-
+    cl.peers[addr.String()] = peer
 
     // Start go routine that handles the closing of the tcp connection if we dont
     // get a keepAlive signal
@@ -254,7 +254,6 @@ func (cl *BTClient) SendPeerMessage(addr *net.TCPAddr, message btnet.PeerMessage
 }
 
 func (cl *BTClient) messageHandler(conn net.Conn) {
-	// Process the message
 	// Max message size: 2^17 = 131072 (128KB)
 	// buf := make([]byte, 131072)
 	// bytesRead, err := conn.(*net.TCPConn).Read(buf)
@@ -263,6 +262,19 @@ func (cl *BTClient) messageHandler(conn net.Conn) {
 	//   fmt.Println("hi")
 	// 	fmt.Println(err)
 	// }
+  // Check if this is a new connection
+  // If so we need to initialize the Peer
+  peer, ok := cl.peers[conn.RemoteAddr().String()]
+	if !ok {
+		// InitializePeer
+		// TODO: use the actual length len(cl.torrent.PieceHashes)
+    // TODO: Get the actual infoHash string and peerId string
+    // util.Printf("This is receiving a connection: %v\n", conn.RemoteAddr())
+		cl.peers[conn.RemoteAddr().String()] = btnet.InitializePeer(conn.RemoteAddr().(*net.TCPAddr), "01234567890123456789", "01234567890123456789", 10, conn.(*net.TCPConn))
+    return
+  }
+
+  // Process the message
 	buf := btnet.ReadMessage(conn.(*net.TCPConn))
 
 	peerMessage := btnet.DecodePeerMessage(buf)
@@ -272,14 +284,6 @@ func (cl *BTClient) messageHandler(conn net.Conn) {
 	cl.mu.Lock()
 	defer cl.mu.Unlock()
 
-	peer, ok := cl.peers[conn.RemoteAddr().String()]
-	if !ok {
-		// InitializePeer
-		// TODO: use the actual length len(cl.torrent.PieceHashes)
-    // TODO: Get the actual infoHash string and peerId string
-    // util.Printf("This is receiving a connection: %v\n", conn.RemoteAddr())
-		cl.peers[conn.RemoteAddr().String()] = btnet.InitializePeer(conn.RemoteAddr().(*net.TCPAddr), "01234567890123456789", "01234567890123456789", 10, conn.(*net.TCPConn))
-	}
   if peerMessage.KeepAlive {
     peer.KeepAlive <- true
   }
