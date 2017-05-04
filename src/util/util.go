@@ -48,6 +48,11 @@ func Printf(format string, a ...interface{}) (n int, err error) {
 	return
 }
 
+func Printfln(format string, a ...interface{}) (n int, err error) {
+  ColorPrintf(Default, format + "\n", a...)
+  return
+}
+
 // error logging
 func EPrintf(format string, a ...interface{}) (n int, err error) {
 	ColorPrintf(Red, "[ERROR] "+format, a...)

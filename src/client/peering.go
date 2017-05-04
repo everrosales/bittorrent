@@ -21,6 +21,10 @@ type Piece struct {
 	blocks []Block
 }
 
+func peerTimeout() time.Duration {
+  return time.Millisecond * 2000
+}
+
 const BlockSize int = 16384
 const DialTimeout = time.Millisecond * 100
 
@@ -199,6 +203,56 @@ func (cl *BTClient) sendPieceMessage(peer btnet.Peer, index int, begin int, leng
 	// TODO send message
 }
 
+func (cl *BTClient) SendPeerMessage(addr *net.TCPAddr, message btnet.PeerMessage) {
+  peer, ok := cl.peers[addr]
+  if !ok {
+    // TODO: Something went wrong
+    // Try dialing
+    // connection := DoDial(addr, data)
+    infoHash := ""
+    peerId := ""
+    bitfieldLength := 0
+    peer := btnet.InitializePeer(addr, infoHash, peerId, bitfieldLength)
+
+
+    // Start go routine that handles the closing of the tcp connection if we dont
+    // get a keepAlive signal
+    go func() {
+      for {
+        select {
+        case <- peer.KeepAlive:
+          // Do nothing, this is good
+        case <- time.After(peerTimeout()):
+          peer.Conn.Close()
+          delete(cl.peers, addr)
+          // cl.peers[addr] = nil
+          break
+        }
+      }
+    }()
+
+    // Separate go routine for sending keepalive signals
+    go func() {
+      for {
+        time.Sleep(peerTimeout() / 2)
+        msg := btnet.PeerMessage{KeepAlive: true}
+        data := btnet.EncodePeerMessage(msg)
+
+        _,err := peer.Conn.Write(data)
+        if (err != nil) {
+          // Connection is probably closed
+          break
+        }
+      }
+    }()
+  }
+  // send data
+  data := btnet.EncodePeerMessage(message)
+  peer.Conn.Write(data)
+  // tcpAddr, _ := net.ResolveTCPAddr("tcp", (*addr).String())
+  // connection.Close()
+}
+
 func (cl *BTClient) messageHandler(conn net.Conn) {
 	// Process the message
 	// Max message size: 2^17 = 131072 (128KB)
@@ -222,8 +276,13 @@ func (cl *BTClient) messageHandler(conn net.Conn) {
 	if !ok {
 		// InitializePeer
 		// TODO: use the actual length len(cl.torrent.PieceHashes)
-		cl.peers[conn.RemoteAddr()] = btnet.InitializePeer(conn.RemoteAddr(), 10)
+    // TODO: Get the actual infoHash string and peerId string
+    util.Printf("This is receiving a connection: %v\n", conn.RemoteAddr())
+		cl.peers[conn.RemoteAddr()] = btnet.InitializePeer(conn.RemoteAddr().(*net.TCPAddr), "01234567890123456789", "01234567890123456789", 10)
 	}
+  if peerMessage.KeepAlive {
+    peer.KeepAlive <- true
+  }
 
 	switch peerMessage.Type {
 	case btnet.Choke:

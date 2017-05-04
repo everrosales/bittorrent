@@ -13,7 +13,7 @@ func init() {
 
 // Helpers
 func makeTestClient(port int) *BTClient {
-	persister := MakePersister()
+	persister := MakePersister("/tmp/persister/tclient.p")
 	return StartBTClient("localhost", port, "../main/test.torrent", persister)
 }
 
@@ -59,8 +59,11 @@ func TestClientTCPServer(t *testing.T) {
 func TestTwoPeers(t *testing.T) {
 	util.StartTest("Testing two peers...")
 	first := makeTestClient(6668)
+  util.Wait(1000)
+  util.Printf("Started peer 1\n")
 	second := makeTestClient(6669)
-
+  util.Printf("Started peer 2\n")
+  util.Wait(1000)
 	// TODO: Make sure they do something interest
 
 	first.Kill()

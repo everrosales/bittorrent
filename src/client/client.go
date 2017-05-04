@@ -28,6 +28,7 @@ type BTClient struct {
 	PieceBitmap []bool
 	blockBitmap map[int][]bool
 
+  // This string is going to be the TCP addr
 	peers map[net.Addr]btnet.Peer // map from IP to Peer
 }
 
