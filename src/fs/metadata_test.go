@@ -1,6 +1,7 @@
 package fs
 
 import (
+	"net/url"
 	"os"
 	"testing"
 	"util"
@@ -25,7 +26,7 @@ func TestInfoHash(t *testing.T) {
 	util.StartTest("Testing info hash reading and encoding...")
 	torrent := ReadTorrent("../main/test.torrent")
 	infoHash := GetInfoHash(torrent)
-	if infoHash != "%C7%A2%CEDd0A%7B%FE%16%82%5C%BDa%DD6%DD%1DS%C1" {
+	if url.QueryEscape(infoHash) != "%C7%A2%CEDd0A%7B%FE%16%82%5C%BDa%DD6%DD%1DS%C1" {
 		t.Fatalf("Decoding info hash failed")
 	}
 	util.EndTest()

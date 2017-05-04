@@ -3,6 +3,7 @@ package bttracker
 import (
 	"fs"
 	"net/http"
+	"net/url"
 	"strconv"
 	"sync"
 	"time"
@@ -55,7 +56,7 @@ func StartBTTracker(path string, port int) *BTTracker {
 	torrent := fs.ReadTorrent(path)
 	tr.infoHash = fs.GetInfoHash(torrent)
 
-	util.IPrintf("Tracker for %s listening on port %d - infohash %s\n", tr.file, port, tr.infoHash)
+	util.IPrintf("Tracker for %s listening on port %d - escaped infohash %s\n", tr.file, port, url.QueryEscape(tr.infoHash))
 	go tr.main(port)
 	go tr.watchPeers()
 	return tr

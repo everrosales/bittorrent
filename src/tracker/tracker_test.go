@@ -29,7 +29,7 @@ const Peer3 = "cccccccccccccccccccc"
 const Port1 = "6882"
 const Port2 = "6883"
 const Port3 = "6884"
-const InfoHash = "HmbK7rlK8tBmNJtShTaW23s-H_Q="
+const InfoHash = "%C7%A2%CEDd0A%7B%FE%16%82%5C%BDa%DD6%DD%1DS%C1"
 const BetweenTests = 50
 
 func init() {
@@ -123,7 +123,7 @@ func TestBasicRequest(t *testing.T) {
 func TestBadInfoHashRequest(t *testing.T) {
 	util.StartTest("Testing expected failure for request with bad infohash...")
 	tr := makeTestTracker(8002)
-	params := requestParams{Peer1, "", Port1, 0, 0, 300, "r39n9S3lzSQTBj5Jk6JBfdVfYu0="}
+	params := requestParams{Peer1, "", Port1, 0, 0, 300, "%C7%A2%CEDd0A%7B%FE%16%82%5C%BDa%DD6%DD%1DSx"}
 	bodyBytes, err := sendRequest(8002, &params)
 	if err != nil {
 		tr.Kill()
