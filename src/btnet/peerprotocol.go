@@ -59,7 +59,7 @@ type Peer struct {
 }
 
 // Make sure to start a go routine to kill this connection
-func InitializePeer(addr *net.TCPAddr, infoHash string, peerId string, bitfieldLength int) Peer {
+func InitializePeer(addr *net.TCPAddr, infoHash string, peerId string, bitfieldLength int, conn *net.TCPConn) Peer {
 	// tcpAddr, err := net.ResolveTCPAddr("tcp", addr)
 	peer := Peer{}
 	// if err != nil {
@@ -77,7 +77,11 @@ func InitializePeer(addr *net.TCPAddr, infoHash string, peerId string, bitfieldL
   // Create handshake
   // Handshake{Pstr: BT_PROTOCOL, InfoHash: []byte(infoHash), PeerId: []byte(peerId)}
   data := EncodeHandshake(Handshake{Pstr: BT_PROTOCOL, InfoHash: []byte(infoHash), PeerId: []byte(peerId)})
-  peer.Conn = *DoDial(addr, data)
+  if (conn != nil) {
+    peer.Conn = *conn
+  } else {
+    peer.Conn = *DoDial(addr, data)
+  }
 
 	return peer
 }

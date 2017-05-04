@@ -46,12 +46,16 @@ func TestClientTCPServer(t *testing.T) {
 	data := btnet.EncodePeerMessage(msg)
 	util.TPrintf("Encoded data: %v\n", data)
 	connection := btnet.DoDial(tcpAddr, data)
-	status, ok := cl.peers[connection.LocalAddr()]
+  // util.Printf("Making a connection\n")
+  util.Wait(1000)
+	status, ok := cl.peers[connection.LocalAddr().String()]
 	if !ok {
-		util.Printf("Missing peer")
+  	util.Printf("Missing peer: %v\n", connection.LocalAddr())
+    t.Fail()
 	}
-
 	util.TPrintf("Status: %s\n", status)
+  // util.Wait(2000)
+  connection.Close()
 	cl.Kill()
 	util.EndTest()
 }

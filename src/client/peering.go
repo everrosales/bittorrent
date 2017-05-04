@@ -204,7 +204,7 @@ func (cl *BTClient) sendPieceMessage(peer btnet.Peer, index int, begin int, leng
 }
 
 func (cl *BTClient) SendPeerMessage(addr *net.TCPAddr, message btnet.PeerMessage) {
-  peer, ok := cl.peers[addr]
+  peer, ok := cl.peers[addr.String()]
   if !ok {
     // TODO: Something went wrong
     // Try dialing
@@ -212,7 +212,7 @@ func (cl *BTClient) SendPeerMessage(addr *net.TCPAddr, message btnet.PeerMessage
     infoHash := ""
     peerId := ""
     bitfieldLength := 0
-    peer := btnet.InitializePeer(addr, infoHash, peerId, bitfieldLength)
+    peer := btnet.InitializePeer(addr, infoHash, peerId, bitfieldLength, nil)
 
 
     // Start go routine that handles the closing of the tcp connection if we dont
@@ -224,7 +224,7 @@ func (cl *BTClient) SendPeerMessage(addr *net.TCPAddr, message btnet.PeerMessage
           // Do nothing, this is good
         case <- time.After(peerTimeout()):
           peer.Conn.Close()
-          delete(cl.peers, addr)
+          delete(cl.peers, addr.String())
           // cl.peers[addr] = nil
           break
         }
@@ -272,13 +272,13 @@ func (cl *BTClient) messageHandler(conn net.Conn) {
 	cl.mu.Lock()
 	defer cl.mu.Unlock()
 
-	peer, ok := cl.peers[conn.RemoteAddr()]
+	peer, ok := cl.peers[conn.RemoteAddr().String()]
 	if !ok {
 		// InitializePeer
 		// TODO: use the actual length len(cl.torrent.PieceHashes)
     // TODO: Get the actual infoHash string and peerId string
-    util.Printf("This is receiving a connection: %v\n", conn.RemoteAddr())
-		cl.peers[conn.RemoteAddr()] = btnet.InitializePeer(conn.RemoteAddr().(*net.TCPAddr), "01234567890123456789", "01234567890123456789", 10)
+    // util.Printf("This is receiving a connection: %v\n", conn.RemoteAddr())
+		cl.peers[conn.RemoteAddr().String()] = btnet.InitializePeer(conn.RemoteAddr().(*net.TCPAddr), "01234567890123456789", "01234567890123456789", 10, conn.(*net.TCPConn))
 	}
   if peerMessage.KeepAlive {
     peer.KeepAlive <- true
