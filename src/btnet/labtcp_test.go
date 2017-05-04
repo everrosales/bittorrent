@@ -56,12 +56,12 @@ func TestSendPeerMessage(t *testing.T) {
 
   servAddr := "localhost:6667"
   StartTCPServer(servAddr, sendPeerMessageHandler)
-  msg := PeerMessage{KeepAlive: true}
-  addr, _ := net.ResolveTCPAddr("tcp", servAddr)
+  // msg := PeerMessage{KeepAlive: true}
+  // addr, _ := net.ResolveTCPAddr("tcp", servAddr)
   // addr := tcpAddr.(*net.Addr)
-  SendPeerMessage(addr, msg)
+  // SendPeerMessage(addr, msg)
   util.Wait(500)
-  msg = PeerMessage{}
+  // msg = PeerMessage{}
   util.EndTest()
 }
 
