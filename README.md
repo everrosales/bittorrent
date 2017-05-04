@@ -22,3 +22,12 @@ To run either the tracker or client, go in to `src/main` and run `go run main.go
 * `src/github.com` - 
 * `src/util` - utils for development (e.g. debug printing)
 * `src/main` - the main command-line utility
+
+## Testing
+Run tests with `go test` in the following directories:
+* `src/btnet`
+* `src/client`
+* `src/fs`
+* `src/tracker`
+
+The file `main/test.torrent` is used in our unit tests and was downloaded from `https://downloads.raspberrypi.org/raspbian_lite_latest.torrent` in May 2017. 
