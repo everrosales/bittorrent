@@ -7,6 +7,15 @@ import (
 	"util"
 )
 
+const BT_PROTOCOL string = "BitTorrent protocol"
+
+type Handshake struct {
+  Pstr string
+  Reserved [8]byte
+  InfoHash []byte
+  PeerId []byte
+}
+
 type MessageType int8
 
 const (
@@ -44,11 +53,13 @@ type PeerStatus struct {
 type Peer struct {
 	Status   PeerStatus
 	Bitfield []bool
-	Addr     net.Addr
+	Addr     net.TCPAddr
+  Conn     net.TCPConn
+  KeepAlive chan bool
 }
 
-// addr of format "192.168.1.0:8080"
-func InitializePeer(addr net.Addr, bitfieldLength int) Peer {
+// Make sure to start a go routine to kill this connection
+func InitializePeer(addr *net.TCPAddr, infoHash string, peerId string, bitfieldLength int, conn *net.TCPConn) Peer {
 	// tcpAddr, err := net.ResolveTCPAddr("tcp", addr)
 	peer := Peer{}
 	// if err != nil {
@@ -56,14 +67,50 @@ func InitializePeer(addr net.Addr, bitfieldLength int) Peer {
 	//   return peer
 	// }
 	// peer.Addr = *tcpAddr
-	peer.Addr = addr
+	peer.Addr = *addr
 	peer.Bitfield = make([]bool, bitfieldLength)
 	peer.Status.AmChoking = true
 	peer.Status.AmInterested = false
 	peer.Status.PeerChoking = true
 	peer.Status.PeerInterested = false
+  peer.KeepAlive = make(chan bool, 100)
+  // Create handshake
+  // Handshake{Pstr: BT_PROTOCOL, InfoHash: []byte(infoHash), PeerId: []byte(peerId)}
+  data := EncodeHandshake(Handshake{Pstr: BT_PROTOCOL, InfoHash: []byte(infoHash), PeerId: []byte(peerId)})
+  if (conn != nil) {
+    peer.Conn = *conn
+  } else {
+    peer.Conn = *DoDial(addr, data)
+  }
 
 	return peer
+}
+
+func DecodeHandshake(data []byte) Handshake {
+
+  return Handshake{}
+}
+
+func EncodeHandshake(handshake Handshake) []byte {
+  pstrlen := int8(len(handshake.Pstr))
+  buf := make([]byte, 49 + int(pstrlen))
+  buf[0] = byte(pstrlen)
+
+  pstr := []byte(handshake.Pstr)
+  for i := 1; i < int(pstrlen) + 1; i++ {
+    buf[i] = pstr[i - 1]
+  }
+  // skip 8 bytes
+  infoHashIndex := 9 + int(pstrlen)
+  // infoHash = []byte(handshake.InfoHash)
+  for i:= infoHashIndex; i < infoHashIndex + 20; i++ {
+    buf[i] = handshake.InfoHash[i - infoHashIndex]
+  }
+  peerIdIndex := infoHashIndex + 20
+  for i := peerIdIndex; i < peerIdIndex + 20; i++ {
+    buf[i] = handshake.PeerId[i - peerIdIndex]
+  }
+  return buf
 }
 
 // fill in a PeerMessage struct from an array of bytes

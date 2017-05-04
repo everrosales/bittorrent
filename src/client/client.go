@@ -4,7 +4,7 @@ import (
 	"btnet"
 	"fs"
 	"math"
-	"net"
+	// "net"
 	"strconv"
 	"sync"
 	"util"
@@ -28,7 +28,8 @@ type BTClient struct {
 	PieceBitmap []bool
 	blockBitmap map[int][]bool
 
-	peers map[net.Addr]btnet.Peer // map from IP to Peer
+  // This string is going to be the TCP addr
+	peers map[string]btnet.Peer // map from IP to Peer
 }
 
 func StartBTClient(ip string, port int, metadataPath string, persister *Persister) *BTClient {
@@ -53,7 +54,7 @@ func StartBTClient(ip string, port int, metadataPath string, persister *Persiste
 	cl.blockBitmap = make(map[int][]bool)
 	cl.loadPieces(persister.ReadState())
 
-	cl.peers = make(map[net.Addr]btnet.Peer)
+	cl.peers = make(map[string]btnet.Peer)
 
 	util.IPrintf("\nClient for %s listening on port %d\n", metadataPath, port)
 
