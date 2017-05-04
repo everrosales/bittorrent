@@ -7,9 +7,12 @@ import (
 	"util"
 )
 
+func init() {
+	util.Debug = util.None
+}
+
 // Helpers
 func makeTestClient(port int) *BTClient {
-	util.Debug = util.Trace
 	persister := MakePersister()
 	return StartBTClient("localhost", port, "../main/test.torrent", persister)
 }

@@ -6,12 +6,13 @@ import (
 	"net"
 	"net/http"
 	"strconv"
+	"time"
 	"util"
 )
 
 const (
 	PeerIdLength    = 20
-	DefaultInterval = 30
+	DefaultInterval = 5 // seconds; sent to clients in response
 )
 
 // custom app handler with parameterized context
@@ -59,7 +60,7 @@ func (ah appHandler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 func IndexHandler(tr *BTTracker, w http.ResponseWriter, r *http.Request) (int, error) {
 	// parsing query params
 	infoHash := r.URL.Query().Get("info_hash")
-	peerId := r.URL.Query().Get("peer_id")
+	peerIdStr := peerId(r.URL.Query().Get("peer_id"))
 	ip := r.URL.Query().Get("ip")
 	port, errPort := strconv.Atoi(r.URL.Query().Get("port"))
 	uploaded, errUp := strconv.Atoi(r.URL.Query().Get("uploaded"))
@@ -77,8 +78,8 @@ func IndexHandler(tr *BTTracker, w http.ResponseWriter, r *http.Request) (int, e
 		return writeFailure(w, "invalid infohash %s", infoHash)
 	} else if port < 1 || port > 65535 {
 		return writeFailure(w, "invalid port %s", port)
-	} else if len(peerId) != PeerIdLength {
-		return writeFailure(w, "invalid peerId %s", peerId)
+	} else if len(peerIdStr) != PeerIdLength {
+		return writeFailure(w, "invalid peerId %s", peerIdStr)
 	} else if event != Started && event != Completed && event != Stopped && event != Empty {
 		return writeFailure(w, "invalid event %s", event)
 	} else if ip == "" {
@@ -86,15 +87,16 @@ func IndexHandler(tr *BTTracker, w http.ResponseWriter, r *http.Request) (int, e
 	}
 
 	// good request; applying update
-	peer := peer{peerId, ip, port, uploaded, downloaded, left, event}
+	reqTime := time.Now()
+	peer := peer{peerIdStr, ip, port, uploaded, downloaded, left, event, reqTime}
 
 	tr.mu.Lock()
-	tr.peers[peerId] = peer
+	tr.peers[peerIdStr] = peer
 	numPeers := len(tr.peers)
-	peers := tr.getPeers()
+	peers := tr.getPeerList()
 	tr.mu.Unlock()
 
-	util.TPrintf("Received request from %s (ip: %s), now have %d peer(s)\n", peerId, ip, numPeers)
+	util.TPrintf("[%s] req %s (ip: %s), %d peer(s)\n", reqTime.Format("2006-01-02 15:04:05.9999"), peerIdStr, ip, numPeers)
 	return writeSuccess(w, DefaultInterval, peers)
 }
 

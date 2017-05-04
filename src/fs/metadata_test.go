@@ -1,24 +1,45 @@
 package fs
 
 import (
+	"os"
 	"testing"
 	"util"
 )
+
+const TempTorrent = "temp.torrent"
 
 func init() {
 	util.Debug = util.None
 }
 
-func TestReadFakeTorrent(t *testing.T) {
-	util.StartTest("TestReadFakeTorrent")
-	file := FileData{Length: 1234}
-	Write("test.torrent", Metadata{"blah", "blah", 1, []string{"aaaaaaaaaaaaaaaaaaaa", "bbbbbbbbbbbbbbbbbbbb"}, []FileData{file}})
-	Read("test.torrent")
+func TestReadRealTorrent(t *testing.T) {
+	util.StartTest("Testing reading a real torrent...")
+	metadata := Read("../main/test.torrent")
+	if metadata.TrackerUrl != "http://tracker.raspberrypi.org:6969/announce" {
+		t.Fatalf("Torrent URL unexpected")
+	}
 	util.EndTest()
 }
 
-func TestReadRealTorrent(t *testing.T) {
-	util.StartTest("TestReadRealTorrent")
-	Read("../main/test.torrent")
+func TestReadFakeTorrent(t *testing.T) {
+	util.StartTest("Testing writing and reading a fake torrent...")
+	file := FileData{Length: 1234}
+	Write(TempTorrent, Metadata{"blahUrl", "blah", 1, []string{"aaaaaaaaaaaaaaaaaaaa", "bbbbbbbbbbbbbbbbbbbb"}, []FileData{file}})
+
+	torrent := ReadTorrent(TempTorrent)
+	if torrent.Announce != "blahUrl" {
+		t.Fatalf("Torrent URLs don't match")
+	}
+
+	metadata := Read(TempTorrent)
+	if metadata.TrackerUrl != "blahUrl" {
+		t.Fatalf("Torrent URLs don't match")
+	}
+
+	err := os.Remove(TempTorrent)
+	if err != nil {
+		util.EPrintf("Failed to delete temp torrent\n")
+	}
+
 	util.EndTest()
 }
