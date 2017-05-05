@@ -217,19 +217,7 @@ func (cl *BTClient) SendPeerMessage(addr *net.TCPAddr, message btnet.PeerMessage
 
     // Start go routine that handles the closing of the tcp connection if we dont
     // get a keepAlive signal
-    go func() {
-      for {
-        select {
-        case <- peer.KeepAlive:
-          // Do nothing, this is good
-        case <- time.After(peerTimeout()):
-          peer.Conn.Close()
-          delete(cl.peers, addr.String())
-          // cl.peers[addr] = nil
-          break
-        }
-      }
-    }()
+
 
     // Separate go routine for sending keepalive signals
     go func() {
@@ -264,15 +252,44 @@ func (cl *BTClient) messageHandler(conn net.Conn) {
 	// }
   // Check if this is a new connection
   // If so we need to initialize the Peer
+  util.Printf("~~~ Got a connection! ~~~\n")
+
   peer, ok := cl.peers[conn.RemoteAddr().String()]
 	if !ok {
+		util.Printf("Missing peer: %v\n", conn.RemoteAddr().String())
 		// InitializePeer
 		// TODO: use the actual length len(cl.torrent.PieceHashes)
     // TODO: Get the actual infoHash string and peerId string
     // util.Printf("This is receiving a connection: %v\n", conn.RemoteAddr())
-		cl.peers[conn.RemoteAddr().String()] = btnet.InitializePeer(conn.RemoteAddr().(*net.TCPAddr), "01234567890123456789", "01234567890123456789", 10, conn.(*net.TCPConn))
+		newPeer :=  btnet.InitializePeer(conn.RemoteAddr().(*net.TCPAddr), "01234567890123456789", "01234567890123456789", 10, conn.(*net.TCPConn))
+		util.Printf("newPeer.Addr.String(): " + newPeer.Addr.String()+"\n")
+		if len(newPeer.Addr.String()) < 3 {
+			conn.(*net.TCPConn).Close()
+			util.EPrintf("Dropping peer connection: Bad handshake\n")
+			return
+		}
+		util.Printf("adding newPeer: %v", newPeer.Conn)
+		cl.peers[conn.RemoteAddr().String()] = newPeer
+		util.Printf("cl.peers-- %v\n", cl.peers)
+
+		go func() {
+			for {
+				select {
+				case <- peer.KeepAlive:
+					// Do nothing, this is good
+				case <- time.After(peerTimeout()):
+					peer.Conn.Close()
+					delete(cl.peers, addr.String())
+					// cl.peers[addr] = nil
+					break
+				}
+			}
+		}()
+
     return
   }
+
+	util.Printf("Already have peer: %v, in %v", conn.RemoteAddr().String(), cl.peers)
 
   // Process the message
 	buf := btnet.ReadMessage(conn.(*net.TCPConn))

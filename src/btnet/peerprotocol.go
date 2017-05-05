@@ -77,23 +77,36 @@ func InitializePeer(addr *net.TCPAddr, infoHash string, peerId string, bitfieldL
   // Create handshake
   // Handshake{Pstr: BT_PROTOCOL, InfoHash: []byte(infoHash), PeerId: []byte(peerId)}
   if (conn != nil) {
-    peer.Conn = *conn
     // This happens if we are not the ones initializing the communication
-    data := ReadHandshake(peer.Conn)
+		util.Printf("Reading Handshake\n")
+    data := ReadHandshake(conn)
     handshake := DecodeHandshake(data)
     // TODO: Process the handshake and drop connection if needed
+		util.Printf("Handshake: %v\n", handshake)
+		if (len(handshake.InfoHash) != 20) {
+			// Badly formatted handshake, dont make the connection stick
+			conn.Close()
+			return Peer{}
+		}
   } else {
     data := EncodeHandshake(Handshake{Pstr: BT_PROTOCOL, InfoHash: []byte(infoHash), PeerId: []byte(peerId)})
-    peer.Conn = *DoDial(addr, data)
+		// Sending data
+		util.Printf("sending data back")
+		peer.Conn = *DoDial(addr, data)
   }
 
 	return peer
 }
 
 func DecodeHandshake(data []byte) Handshake {
+	if (len(data) < 1) {
+		util.EPrintf("Badly formatted data")
+		return Handshake{}
+	}
+
   pstrbuf := make([]byte, 1)
   pstrbuf[0] = data[0]
-  var pstrLen int8
+  var pstrLen uint8
   pstrLenDecodeBuf := bytes.NewReader(pstrbuf)
   errBinary := binary.Read(pstrLenDecodeBuf, binary.BigEndian, &pstrLen)
   if errBinary != nil {
@@ -101,7 +114,13 @@ func DecodeHandshake(data []byte) Handshake {
   }
   util.TPrintf("pstrLen: %d\n", pstrLen)
 
+	if (len(data) < (49 + int(pstrLen))) {
+		util.EPrintf("Badly formatted data\n")
+		return Handshake{}
+	}
+
   // Decode pstr
+	util.Printf("len(data): %v\n", len(data))
   pstr := string(data[1:int(pstrLen) + 1])
   util.TPrintf("pstr: %s\n", pstr)
 

@@ -5,6 +5,8 @@ import (
 	"bytes"
 	"encoding/binary"
 	"net"
+	"io"
+	"time"
 	//"time"
 	"util"
 )
@@ -34,7 +36,11 @@ func DoDial(addr *net.TCPAddr, data []byte) *net.TCPConn {
 		return conn
 	}
 	util.TPrintf("writing out to connection\n")
-	conn.Write(data)
+	bytesSent, err := conn.Write(data)
+	util.Printf("bytes: %v", bytesSent)
+	if err != nil {
+		util.EPrintf("labtcp DoDail: %s\n", err)
+	}
 	return conn
 	// return ReadMessage(conn)
 }
@@ -53,7 +59,7 @@ func ReadHandshake(conn *net.TCPConn) []byte {
 	msgLength := make([]byte, 1)
 	response, err := reader.ReadByte()
 	if err != nil {
-		util.EPrintf("labtcp ReadMessage: %s\n", err)
+		util.EPrintf("labtcp ReadHandshake: %s\n", err)
 	}
 	msgLength[0] = response
 
@@ -63,9 +69,27 @@ func ReadHandshake(conn *net.TCPConn) []byte {
 	msgLengthDecodeBuf := bytes.NewReader(msgLength)
 	errBinary := binary.Read(msgLengthDecodeBuf, binary.BigEndian, &length)
 	if errBinary != nil {
-		util.EPrintf("labtcp ReadMessage: %s\n", errBinary)
+		util.EPrintf("labtcp ReadHandshake binaryDecode: %s\n", errBinary)
 	}
 	util.TPrintf("length: %d\n", int(length))
+
+	// Read zeros
+	zerobuf := make([]byte, 8)
+	for i:= 0; i < 8; i++ {
+		response, err := reader.ReadByte()
+		if err != nil {
+			util.EPrintf("labtcp ReadHandshake: %s\n", err.Error())
+			responseData := append(msgLength, zerobuf...)
+			return responseData
+			// break
+		}
+		if (response != 0x00) {
+			util.EPrintf("labtcp ReadHandshake: badly formatted handshake\n")
+			responseData := append(msgLength, zerobuf...)
+			return responseData
+		}
+
+	}
 
 	// Cross fingers
 	// Read the number of bytes specified by length and hope it doesnt go out of sync
@@ -73,13 +97,17 @@ func ReadHandshake(conn *net.TCPConn) []byte {
 	for i := 0; i < int(length) + 48; i++ {
 		response, err := reader.ReadByte()
 		if err != nil {
-			util.EPrintf("labtcp ReadMessage: %s\n", err.Error())
-			break
+			util.EPrintf("labtcp ReadHandshake: %s\n", err.Error())
+			responseData := append(msgLength, zerobuf...)
+			responseData = append(responseData,  msgbuf...)
+			return responseData
+			// break
 		}
 		msgbuf[i] = response
 	}
 
-	responseData := append(msgLength, msgbuf...)
+	responseData := append(msgLength, zerobuf...)
+	responseData = append(responseData, msgbuf...)
 	return responseData
 }
 
@@ -133,4 +161,21 @@ func ReadMessage(conn *net.TCPConn) []byte {
 	//   fmt.Println(err)
 	// }
 	return responseData
+}
+
+// TODO: This doesnt work... wtf
+func IsConnectionClosed(conn *net.TCPConn) bool {
+	one := []byte{}
+	conn.SetReadDeadline(time.Now())
+	if data, err := conn.Read(one); err == io.EOF {
+	  // l.Printf(logger.LevelDebug, "%s detected closed LAN connection", id)
+	  conn.Close()
+	  // conn = nil
+		return true
+	} else {
+	  // var zero time.Time
+		util.Printf("This is the data: %v, %v\n", data, err)
+	  conn.SetReadDeadline(time.Now().Add(10 * time.Millisecond))
+		return false
+	}
 }
