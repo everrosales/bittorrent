@@ -279,7 +279,7 @@ func (cl *BTClient) messageHandler(conn net.Conn) {
 					// Do nothing, this is good
 				case <- time.After(peerTimeout()):
 					peer.Conn.Close()
-					delete(cl.peers, addr.String())
+					delete(cl.peers, peer.Addr.String())
 					// cl.peers[addr] = nil
 					break
 				}
