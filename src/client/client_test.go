@@ -5,7 +5,7 @@ import (
 	"net"
 	"testing"
 	"util"
-	"time"
+	// "time"
 )
 
 func init() {
@@ -42,18 +42,18 @@ func TestClientTCPServer(t *testing.T) {
 		t.Fatalf("Error resolving TCP addr")
 	}
 
-	// Send badly formatted message
-	baddata := []byte{0xde, 0xad, 0xbe, 0xef}
-	connection := btnet.DoDial(tcpAddr, baddata)
-	connection.SetDeadline(time.Now().Add(500 * time.Millisecond))
-	util.Wait(1000)
-	if len(cl.peers) > 0 {
-		util.EPrintf("There should be no peers connected\n")
-		t.Fail()
-	}
-	connection.Close()
-
-  util.Wait(10000)
+	// // Send badly formatted message
+	// baddata := []byte{0xde, 0xad, 0xbe, 0xef}
+	// connection := btnet.DoDial(tcpAddr, baddata)
+	// connection.SetDeadline(time.Now().Add(500 * time.Millisecond))
+	// util.Wait(1000)
+	// if len(cl.peers) > 0 {
+	// 	util.EPrintf("There should be no peers connected\n")
+	// 	t.Fail()
+	// }
+	// connection.Close()
+	//
+  // util.Wait(10000)
 	util.Printf("Sending second handshake\n")
 	// First send handshake
 	handshake := btnet.Handshake{
@@ -66,34 +66,44 @@ func TestClientTCPServer(t *testing.T) {
 	// Sending KeepAlive
 	util.TPrintf("Encoded data: %v\n", data)
 	util.Printf("Waiting for thing\n")
-	connection = btnet.DoDial(tcpAddr, data)
+	connection := btnet.DoDial(tcpAddr, data)
 	util.Wait(100)
 	util.Printf("Done waiting for thing\n")
 	// connection.Close()
 	status, ok := cl.peers[connection.LocalAddr().String()]
 	if ok {
-		connection.Close()
-		cl.Kill()
+		// connection.Close()
+		// cl.Kill()
 		util.TPrintf("Status: %s\n", status)
-		util.EndTest()
-		return
+		// util.EndTest()
+		// return
 	}
 
-	// msg := btnet.PeerMessage{Type: btnet.Interested}
-	// data = btnet.EncodePeerMessage(msg)
-  // // util.Printf("Making a connection\n")
-	// util.Wait(1000)
-	// status, ok := cl.peers[connection.LocalAddr().String()]
-	// if ok {
-	// 	connection.Close()
-	// 	cl.Kill()
-	// 	util.TPrintf("Status: %s\n", status)
-	// 	util.EndTest()
-	// 	return
-	// }
-	// util.Printf("Missing peer: %v\n", connection.LocalAddr())
+	msg := btnet.PeerMessage{Type: btnet.Interested}
+	data = btnet.EncodePeerMessage(msg)
+  // util.Printf("Making a connection\n")
+	util.Wait(100)
+	status, ok = cl.peers[connection.LocalAddr().String()]
+	if ok {
+		// connection.Close()
+		// cl.Kill()
+		util.TPrintf("Status: %s\n", status)
+		// util.EndTest()
+		// return
+	}
+
+	util.Wait(4000)
+	if len(cl.peers) > 0 {
+		util.EPrintf("There should be no peers connected\n")
+		t.Fail()
+	} else {
+		// util.Printf("Missing peer: %v\n", connection.LocalAddr())
+		// t.Fail()
+		util.EndTest()
+	}
 	util.Printf("cl.peers: %v\n", cl.peers)
-  t.Fail()
+
+
 }
 
 func TestTwoPeers(t *testing.T) {

@@ -279,7 +279,10 @@ func (cl *BTClient) messageHandler(conn net.Conn) {
 					// Do nothing, this is good
 				case <- time.After(peerTimeout()):
 					peer.Conn.Close()
-					delete(cl.peers, peer.Addr.String())
+					util.Printf("Closing the channel\n")
+					delete(cl.peers, newPeer.Addr.String())
+					util.Printf("Deleting peer: %v\n", peer.Addr.String())
+					util.Printf("cl.peers after deletion: %v\n", cl.peers)
 					// cl.peers[addr] = nil
 					break
 				}
@@ -290,42 +293,44 @@ func (cl *BTClient) messageHandler(conn net.Conn) {
   }
 
 	util.Printf("Already have peer: %v, in %v", conn.RemoteAddr().String(), cl.peers)
+	for ok {
+	  // Process the message
+		buf := btnet.ReadMessage(conn.(*net.TCPConn))
 
-  // Process the message
-	buf := btnet.ReadMessage(conn.(*net.TCPConn))
+		peerMessage := btnet.DecodePeerMessage(buf)
+		// Massive switch case that would handle incoming messages depending on message type
 
-	peerMessage := btnet.DecodePeerMessage(buf)
-	// Massive switch case that would handle incoming messages depending on message type
+		// peerMessage := btnet.PeerMessage{}  // empty for now, TODO
+		cl.mu.Lock()
+		defer cl.mu.Unlock()
 
-	// peerMessage := btnet.PeerMessage{}  // empty for now, TODO
-	cl.mu.Lock()
-	defer cl.mu.Unlock()
+	  if peerMessage.KeepAlive {
+	    peer.KeepAlive <- true
+	  }
 
-  if peerMessage.KeepAlive {
-    peer.KeepAlive <- true
-  }
-
-	switch peerMessage.Type {
-	case btnet.Choke:
-		peer.Status.PeerChoking = true
-	case btnet.Unchoke:
-		peer.Status.PeerChoking = false
-	case btnet.Interested:
-		peer.Status.PeerInterested = true
-	case btnet.NotInterested:
-		peer.Status.PeerInterested = false
-	case btnet.Have:
-		peer.Bitfield[peerMessage.Index] = true
-	case btnet.Bitfield:
-		peer.Bitfield = peerMessage.Bitfield
-	case btnet.Request:
-		cl.sendBlock(int(peerMessage.Index), peerMessage.Begin, peerMessage.Length, peer)
-	case btnet.Piece:
-		cl.saveBlock(int(peerMessage.Index), peerMessage.Begin, peerMessage.Length, peerMessage.Block)
-	case btnet.Cancel:
-		// TODO
-	default:
-		// keepalive
-		// TODO?
+		switch peerMessage.Type {
+		case btnet.Choke:
+			peer.Status.PeerChoking = true
+		case btnet.Unchoke:
+			peer.Status.PeerChoking = false
+		case btnet.Interested:
+			peer.Status.PeerInterested = true
+		case btnet.NotInterested:
+			peer.Status.PeerInterested = false
+		case btnet.Have:
+			peer.Bitfield[peerMessage.Index] = true
+		case btnet.Bitfield:
+			peer.Bitfield = peerMessage.Bitfield
+		case btnet.Request:
+			cl.sendBlock(int(peerMessage.Index), peerMessage.Begin, peerMessage.Length, peer)
+		case btnet.Piece:
+			cl.saveBlock(int(peerMessage.Index), peerMessage.Begin, peerMessage.Length, peerMessage.Block)
+		case btnet.Cancel:
+			// TODO
+		default:
+			// keepalive
+			// TODO?
+		}
+		_, ok = cl.peers[conn.RemoteAddr().String()]
 	}
 }

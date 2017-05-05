@@ -19,12 +19,14 @@ func StartTCPServer(addr string, handler func(net.Conn)) {
 		util.EPrintf("labtcp StartTCPServer: %s\n", err)
 	}
 	go func(ln net.Listener) {
-		conn, err := ln.Accept()
-		if err != nil {
-			// complain about a thing
-			util.EPrintf("labtcp StartTCPServer: %s\n", err)
+		for {
+			conn, err := ln.Accept()
+			if err != nil {
+				// complain about a thing
+				util.EPrintf("labtcp StartTCPServer: %s\n", err)
+			}
+			go handler(conn)
 		}
-		go handler(conn)
 	}(ln)
 }
 
@@ -73,6 +75,20 @@ func ReadHandshake(conn *net.TCPConn) []byte {
 	}
 	util.TPrintf("length: %d\n", int(length))
 
+	// Read pstr
+	pstrbuf := make([]byte, int(length))
+	for i:= 0; i < int(length); i++ {
+		response, err := reader.ReadByte()
+		if err != nil {
+			util.EPrintf("labtcp ReadHandshake: %s\n", err.Error())
+			responseData := append(msgLength, pstrbuf...)
+			return responseData
+			// break
+		}
+		pstrbuf[i] = response
+
+	}
+
 	// Read zeros
 	zerobuf := make([]byte, 8)
 	for i:= 0; i < 8; i++ {
@@ -83,7 +99,7 @@ func ReadHandshake(conn *net.TCPConn) []byte {
 			return responseData
 			// break
 		}
-		if (response != 0x00) {
+		if (response != 0) {
 			util.EPrintf("labtcp ReadHandshake: badly formatted handshake\n")
 			responseData := append(msgLength, zerobuf...)
 			return responseData
@@ -93,8 +109,8 @@ func ReadHandshake(conn *net.TCPConn) []byte {
 
 	// Cross fingers
 	// Read the number of bytes specified by length and hope it doesnt go out of sync
-	msgbuf := make([]byte, int(length) + 48)
-	for i := 0; i < int(length) + 48; i++ {
+	msgbuf := make([]byte, 40)
+	for i := 0; i < 40; i++ {
 		response, err := reader.ReadByte()
 		if err != nil {
 			util.EPrintf("labtcp ReadHandshake: %s\n", err.Error())
@@ -106,7 +122,9 @@ func ReadHandshake(conn *net.TCPConn) []byte {
 		msgbuf[i] = response
 	}
 
-	responseData := append(msgLength, zerobuf...)
+
+	responseData := append(msgLength, pstrbuf...)
+	responseData = append(responseData, zerobuf...)
 	responseData = append(responseData, msgbuf...)
 	return responseData
 }
