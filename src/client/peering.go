@@ -252,25 +252,21 @@ func (cl *BTClient) messageHandler(conn net.Conn) {
 	// }
   // Check if this is a new connection
   // If so we need to initialize the Peer
-  util.Printf("~~~ Got a connection! ~~~\n")
+  util.TPrintf("~~~ Got a connection! ~~~\n")
 
   peer, ok := cl.peers[conn.RemoteAddr().String()]
 	if !ok {
-		util.Printf("Missing peer: %v\n", conn.RemoteAddr().String())
 		// InitializePeer
 		// TODO: use the actual length len(cl.torrent.PieceHashes)
     // TODO: Get the actual infoHash string and peerId string
     // util.Printf("This is receiving a connection: %v\n", conn.RemoteAddr())
 		newPeer :=  btnet.InitializePeer(conn.RemoteAddr().(*net.TCPAddr), "01234567890123456789", "01234567890123456789", 10, conn.(*net.TCPConn))
-		util.Printf("newPeer.Addr.String(): " + newPeer.Addr.String()+"\n")
 		if len(newPeer.Addr.String()) < 3 {
 			conn.(*net.TCPConn).Close()
-			util.EPrintf("Dropping peer connection: Bad handshake\n")
+			util.TPrintf("Dropping peer connection: Bad handshake\n")
 			return
 		}
-		util.Printf("adding newPeer: %v", newPeer.Conn)
 		cl.peers[conn.RemoteAddr().String()] = newPeer
-		util.Printf("cl.peers-- %v\n", cl.peers)
 
 		go func() {
 			for {
@@ -279,10 +275,7 @@ func (cl *BTClient) messageHandler(conn net.Conn) {
 					// Do nothing, this is good
 				case <- time.After(peerTimeout()):
 					peer.Conn.Close()
-					util.Printf("Closing the channel\n")
 					delete(cl.peers, newPeer.Addr.String())
-					util.Printf("Deleting peer: %v\n", peer.Addr.String())
-					util.Printf("cl.peers after deletion: %v\n", cl.peers)
 					// cl.peers[addr] = nil
 					break
 				}
@@ -292,7 +285,6 @@ func (cl *BTClient) messageHandler(conn net.Conn) {
     return
   }
 
-	util.Printf("Already have peer: %v, in %v", conn.RemoteAddr().String(), cl.peers)
 	for ok {
 	  // Process the message
 		buf := btnet.ReadMessage(conn.(*net.TCPConn))
@@ -304,9 +296,13 @@ func (cl *BTClient) messageHandler(conn net.Conn) {
 		cl.mu.Lock()
 		defer cl.mu.Unlock()
 
-	  if peerMessage.KeepAlive {
-	    peer.KeepAlive <- true
-	  }
+	  // if peerMessage.KeepAlive {
+		// peer.KeepAlive <- true
+	  // }
+
+		// Really anytime we receive a message we should treat this as
+		// a KeepAlive message
+		peer.KeepAlive <- true
 
 		switch peerMessage.Type {
 		case btnet.Choke:

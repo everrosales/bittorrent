@@ -38,8 +38,7 @@ func DoDial(addr *net.TCPAddr, data []byte) *net.TCPConn {
 		return conn
 	}
 	util.TPrintf("writing out to connection\n")
-	bytesSent, err := conn.Write(data)
-	util.Printf("bytes: %v", bytesSent)
+	_, err = conn.Write(data)
 	if err != nil {
 		util.EPrintf("labtcp DoDail: %s\n", err)
 	}
@@ -67,7 +66,7 @@ func ReadHandshake(conn *net.TCPConn) []byte {
 
 	util.TPrintf("msglength: %v\n", msgLength)
 	// Parse the length of the message
-	var length int8
+	var length uint8
 	msgLengthDecodeBuf := bytes.NewReader(msgLength)
 	errBinary := binary.Read(msgLengthDecodeBuf, binary.BigEndian, &length)
 	if errBinary != nil {
