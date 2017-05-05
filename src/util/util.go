@@ -2,6 +2,7 @@ package util
 
 import (
 	"bytes"
+	"crypto/rand"
 	"fmt"
 	"strings"
 	"time"
@@ -49,8 +50,8 @@ func Printf(format string, a ...interface{}) (n int, err error) {
 }
 
 func Printfln(format string, a ...interface{}) (n int, err error) {
-  ColorPrintf(Default, format + "\n", a...)
-  return
+	ColorPrintf(Default, format+"\n", a...)
+	return
 }
 
 // error logging
@@ -123,4 +124,12 @@ func SplitEveryN(s string, n int) []string {
 	}
 
 	return subs
+}
+
+func GenerateRandStr(length int) string {
+	b := make([]byte, length)
+	if _, err := rand.Read(b); err != nil {
+		panic(err)
+	}
+	return string(b[:length])
 }

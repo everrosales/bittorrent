@@ -10,13 +10,26 @@ import (
 	"util"
 )
 
+type status string
+
+const (
+	Started   status = "started"
+	Completed status = "completed"
+	Stopped   status = "stopped"
+)
+
 type BTClient struct {
 	mu        sync.Mutex
 	persister *Persister
 
 	// addr net.Addr
-	ip   string
-	port string
+	ip       string
+	port     string
+	peerId   string
+	infoHash string
+	status   status
+
+	heartbeatInterval int // number of seconds
 
 	torrentPath string
 	torrent     fs.Metadata
@@ -28,18 +41,24 @@ type BTClient struct {
 	PieceBitmap []bool
 	blockBitmap map[int][]bool
 
-  // This string is going to be the TCP addr
+	// This string is going to be the TCP addr
 	peers map[string]btnet.Peer // map from IP to Peer
 }
 
 func StartBTClient(ip string, port int, metadataPath string, persister *Persister) *BTClient {
+
+	torrent := fs.ReadTorrent(metadataPath)
 
 	cl := &BTClient{}
 
 	cl.ip = ip
 	cl.port = strconv.Itoa(port)
 	cl.torrentPath = metadataPath
-	cl.torrent = fs.Read(metadataPath)
+	cl.torrent = fs.Read(metadataPath) // metadata
+	cl.peerId = util.GenerateRandStr(20)
+	cl.infoHash = fs.GetInfoHash(torrent)
+	cl.status = Started
+	cl.heartbeatInterval = 5
 
 	cl.persister = persister
 	cl.shutdown = make(chan bool)

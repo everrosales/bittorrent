@@ -4,12 +4,12 @@ import (
 	"btnet"
 	"net"
 	"testing"
-	"util"
 	"time"
+	"util"
 )
 
 func init() {
-	util.Debug = util.None
+	util.Debug = util.Trace
 }
 
 // Helpers
@@ -28,7 +28,8 @@ func TestMakeClient(t *testing.T) {
 }
 
 func TestClientTCPServer(t *testing.T) {
-	util.StartTest("Testing client TCP server... \n    WARNING Expecting: [ERROR] labtcp ReadHandshake: EOF\n    [ERROR] Badly formatted data\n")
+	util.StartTest("Testing client TCP server...")
+	util.Printf("WARNING Expecting: \n\t[ERROR] labtcp ReadHandshake: EOF\n\t[ERROR] Badly formatted data\n")
 	cl := makeTestClient(6667)
 	// TODO: We should have a ready signal that we can check to see if
 	//       the client is ready to start
@@ -53,15 +54,15 @@ func TestClientTCPServer(t *testing.T) {
 	}
 	connection.Close()
 
-  util.Wait(1000)
+	util.Wait(1000)
 	// First send handshake
 	handshake := btnet.Handshake{
-	  Pstr: "BitTorrent protocol",
-	  InfoHash: []byte{0x00, 0x01, 0x02, 0x03, 0x04, 0x05, 0x06, 0x07, 0x08, 0x09,
-	                   0x10, 0x11, 0x12, 0x13, 0x14, 0x15, 0x16, 0x17, 0x18, 0x19},
-	  PeerId: []byte{0x10, 0x11, 0x12, 0x13, 0x14, 0x15, 0x16, 0x17, 0x18, 0x19,
-	                 0x00, 0x01, 0x02, 0x03, 0x04, 0x05, 0x06, 0x07, 0x08, 0x09}}
-  data := btnet.EncodeHandshake(handshake)
+		Pstr: "BitTorrent protocol",
+		InfoHash: []byte{0x00, 0x01, 0x02, 0x03, 0x04, 0x05, 0x06, 0x07, 0x08, 0x09,
+			0x10, 0x11, 0x12, 0x13, 0x14, 0x15, 0x16, 0x17, 0x18, 0x19},
+		PeerId: []byte{0x10, 0x11, 0x12, 0x13, 0x14, 0x15, 0x16, 0x17, 0x18, 0x19,
+			0x00, 0x01, 0x02, 0x03, 0x04, 0x05, 0x06, 0x07, 0x08, 0x09}}
+	data := btnet.EncodeHandshake(handshake)
 	// Sending KeepAlive
 	util.TPrintf("Encoded data: %v\n", data)
 	connection = btnet.DoDial(tcpAddr, data)
@@ -75,7 +76,7 @@ func TestClientTCPServer(t *testing.T) {
 
 	msg := btnet.PeerMessage{Type: btnet.Interested}
 	data = btnet.EncodePeerMessage(msg)
-  // util.Printf("Making a connection\n")
+	// util.Printf("Making a connection\n")
 	util.Wait(100)
 	_, ok = cl.peers[connection.LocalAddr().String()]
 	if !ok {
@@ -98,11 +99,11 @@ func TestClientTCPServer(t *testing.T) {
 func TestTwoPeers(t *testing.T) {
 	util.StartTest("Testing two peers...")
 	first := makeTestClient(6668)
-  util.Wait(1000)
-  util.Printf("Started peer 1\n")
+	util.Wait(1000)
+	util.Printf("Started peer 1\n")
 	second := makeTestClient(6669)
-  util.Printf("Started peer 2\n")
-  util.Wait(1000)
+	util.Printf("Started peer 2\n")
+	util.Wait(1000)
 	// TODO: Make sure they do something interest
 
 	first.Kill()
