@@ -3,9 +3,12 @@ package fs
 // For reading torrent metadata files
 
 import (
+	"bufio"
 	"crypto/sha1"
 	//"encoding/base64"
 	"io/ioutil"
+	"math"
+	"os"
 	"strings"
 	"util"
 )
@@ -58,7 +61,7 @@ func GetInfoHash(torrent Torrent) string {
 	return shaStr
 }
 
-// Given a file path, read the info field into a Metadata struct
+// Given a .torrent file path, read the info field into a Metadata struct
 func Read(path string) Metadata {
 	torrent := ReadTorrent(path)
 	metadata := Metadata{}
@@ -116,4 +119,47 @@ func Write(path string, data Metadata) {
 	if err != nil {
 		panic(err)
 	}
+}
+
+// read an input file (currently no support for directories) and
+// create a Metadata struct
+func GetMetadata(path string, trackerUrl string, fileName string, numPieces int) Metadata {
+	f, err := os.Open(path)
+	if err != nil {
+		panic("Error opening file")
+	}
+	fi, e := f.Stat()
+	if e != nil {
+		panic("Error opening file")
+	}
+
+	files := []string{}
+	files = append(files, path)
+	fileSize := fi.Size()
+
+	fileInfo := FileData{fileSize, files}
+
+	if fileSize < int64(numPieces) {
+		panic("Too many pieces")
+	}
+
+	pieceSize := int(math.Ceil(float64(fileSize) / float64(numPieces)))
+
+	pieces := []string{}
+
+	reader := bufio.NewReader(f)
+	buffer := make([]byte, pieceSize)
+
+	for i := 0; i < numPieces; i++ {
+		// read file chunk and hash it
+		readSize, err := reader.Read(buffer)
+		if err != nil {
+			panic("Error reading file")
+		}
+		sha := sha1.Sum(buffer)
+		pieces = append(pieces, string(sha[:readSize]))
+
+	}
+
+	return Metadata{trackerUrl, fileName, int64(numPieces), pieces, []FileData{fileInfo}}
 }

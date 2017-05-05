@@ -3,7 +3,6 @@ package main
 import (
 	"flag"
 	"fs"
-	"os"
 	"strings"
 	"util"
 )
@@ -11,13 +10,25 @@ import (
 func main() {
 	fileFlag := flag.String("file", "", "Input file path (required)")
 	outFlag := flag.String("out", "", "Output torrent file name (default is 'out.torrent')")
+	urlFlag := flag.String("url", "", "URL of tracker (required)")
+	nameFlag := flag.String("name", "", "Suggested name to save file as (required)")
 	flag.Parse()
 
 	torrentFile := *outFlag
 	filePath := *fileFlag
+	url := *urlFlag
+	name := *nameFlag
 
 	if filePath == "" {
-		util.EPrintf("Missing input file path.\n")
+		util.EPrintf("Missing input file path (-file)\n")
+		return
+	}
+	if url == "" {
+		util.EPrintf("Missing tracker url (-url)\n")
+		return
+	}
+	if name == "" {
+		util.EPrintf("Missing torrent name (-name)\n")
 		return
 	}
 	if torrentFile == "" || !strings.Contains(torrentFile, ".torrent") {
@@ -25,15 +36,6 @@ func main() {
 		torrentFile = "out.torrent"
 	}
 
-	fi, e := os.Stat(filePath)
-	if e != nil {
-		util.EPrintf("Error opening file, quitting\n")
-	}
-
-	files := []string{}
-	files[0] = filePath
-
-	fileInfo := fs.FileData{fi.Size(), files}
-
-	fs.Write(torrentFile, fs.Metadata{"blah", "blah", 1, []string{"aaaaaaaaaaaaaaaaaaaa", "bbbbbbbbbbbbbbbbbbbb"}, []fs.FileData{fileInfo}})
+	metadata := fs.GetMetadata(filePath, url, name, 10)
+	fs.Write(torrentFile, metadata)
 }
