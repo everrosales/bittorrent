@@ -82,7 +82,7 @@ func InitializePeer(addr *net.TCPAddr, infoHash string, peerId string, bitfieldL
     handshake := DecodeHandshake(data)
     // TODO: Process the handshake and drop connection if needed
 		if (len(handshake.InfoHash) != 20) {
-			// Badly formatted handshake, dont make the connection stick
+			// Badly formatted hsandshake, dont make the connection stick
 			conn.Close()
 			return Peer{}
 		}
@@ -157,19 +157,19 @@ func EncodeHandshake(handshake Handshake) []byte {
 func DecodePeerMessage(data []byte) PeerMessage {
 
 	// messageType := data[0]
-	var length int32
+	var msglength int32
 	var messageType int8
 	peerMessage := PeerMessage{}
 	// b := []byte{0x18, 0x2d, 0x44, 0x54, 0xfb, 0x21, 0x09, 0x40}
 	buf := bytes.NewReader(data)
 
 	// First grab the length of the message sent
-	err := binary.Read(buf, binary.BigEndian, &length)
+	err := binary.Read(buf, binary.BigEndian, &msglength)
 	if err != nil {
 		util.EPrintf("peerprotocol DecodePeerMessage: %s\n", err)
 	}
 	// peerMessage.Length = int(length) // peerMessage.Length != length
-	if length < 1 {
+	if msglength < 1 {
 		// This is a keepalive message
 		peerMessage.KeepAlive = true
 		return peerMessage
@@ -207,16 +207,53 @@ func DecodePeerMessage(data []byte) PeerMessage {
 		// fmt.Println("Have message")
 		var index int32
 		err = binary.Read(buf, binary.BigEndian, &index)
+		checkAndPrintErr(err)
 		peerMessage.Index = index
 		return peerMessage
 	case Bitfield:
 		util.Printf("Bitfield message\n")
 	case Request:
-		util.Printf("Request message\n")
+		// util.Printf("Request message\n")
+		var index int32
+		var begin int32
+		var length int32
+		err = binary.Read(buf, binary.BigEndian, &index)
+		checkAndPrintErr(err)
+		err = binary.Read(buf, binary.BigEndian, &begin)
+		checkAndPrintErr(err)
+		err = binary.Read(buf, binary.BigEndian, &length)
+		checkAndPrintErr(err)
+		peerMessage.Index = index
+		peerMessage.Begin = int(begin)
+		peerMessage.Length = int(length)
 	case Piece:
 		util.Printf("Piece message\n")
+		var index int32
+		var begin int32
+		block := make([]byte, msglength - 9)
+		err = binary.Read(buf, binary.BigEndian, &index)
+		checkAndPrintErr(err)
+		err = binary.Read(buf, binary.BigEndian, &begin)
+		checkAndPrintErr(err)
+		err = binary.Read(buf, binary.BigEndian, &block)
+		checkAndPrintErr(err)
+		peerMessage.Index = index
+		peerMessage.Begin = int(begin)
+		peerMessage.Block = block
 	case Cancel:
 		util.Printf("Cancel message\n")
+		var index int32
+		var begin int32
+		var length int32
+		err = binary.Read(buf, binary.BigEndian, &index)
+		checkAndPrintErr(err)
+		err = binary.Read(buf, binary.BigEndian, &begin)
+		checkAndPrintErr(err)
+		err = binary.Read(buf, binary.BigEndian, &length)
+		checkAndPrintErr(err)
+		peerMessage.Index = index
+		peerMessage.Begin = int(begin)
+		peerMessage.Length = int(length)
 	default:
 		util.Printf("Unsupported message\n")
 	}
@@ -240,74 +277,99 @@ func EncodePeerMessage(msg PeerMessage) []byte {
 	switch msg.Type {
 	case Choke:
 		// err = binary.Write(buf, binary.BigEndian, int32(1))
-		// if err != nil {
-		//   fmt.Println("binary.Write failed:", err)
-		// }
+		// checkAndPrintErr(err)
 		// err = binary.Write(buf, binary.BigEndian, msg.Type)
-		// if err != nil {
-		//   fmt.Println("binary.Write failed:", err)
-		// }
+		// checkAndPrintErr(err)
 		// fmt.Println("Encoding Choke message")
 		fallthrough
 	case Unchoke:
 		// err = binary.Write(buf, binary.BigEndian, int32(1))
-		// if err != nil {
-		//   fmt.Println("binary.Write failed:", err)
-		// }
+		// checkAndPrintErr(err)
 		// err = binary.Write(buf, binary.BigEndian, msg.Type)
-		// if err != nil {
-		//   fmt.Println("binary.Write failed:", err)
-		// }
+		// checkAndPrintErr(err)
 		// fmt.Println("Encoding Unchoke message")
 		fallthrough
 	case Interested:
 		// err = binary.Write(buf, binary.BigEndian, int32(1))
-		// if err != nil {
-		//   fmt.Println("binary.Write failed:", err)
-		// }
+		// checkAndPrintErr(err)
 		// err = binary.Write(buf, binary.BigEndian, msg.Type)
-		// if err != nil {
-		//   fmt.Println("binary.Write failed:", err)
-		// }
+		// checkAndPrintErr(err)
 		// fmt.Println("Encoding Interested message")
 		fallthrough
 	case NotInterested:
 		err = binary.Write(buf, binary.BigEndian, int32(1))
-		if err != nil {
-			util.EPrintf("peerprotocol EncodePeerMessage: %s\n", err)
-		}
+		checkAndPrintErr(err)
 		err = binary.Write(buf, binary.BigEndian, msg.Type)
-		if err != nil {
-			util.EPrintf("peerprotocol EncodePeerMessage: %s\n", err)
-		}
+		checkAndPrintErr(err)
 		// fmt.Println("Encoding NotIntested message")
 	case Have:
 		err = binary.Write(buf, binary.BigEndian, int32(5))
-		if err != nil {
-			util.EPrintf("peerprotocol EncodePeerMessage: %s\n", err)
-		}
+		checkAndPrintErr(err)
 		err = binary.Write(buf, binary.BigEndian, msg.Type)
-		if err != nil {
-			util.EPrintf("peerprotocol EncodePeerMessage: %s\n", err)
-		}
+		checkAndPrintErr(err)
 		err = binary.Write(buf, binary.BigEndian, msg.Index)
-		if err != nil {
-			util.EPrintf("peerprotocol EncodePeerMessage: %s\n", err)
-		}
-		util.Printf("Encoding Have message")
+		checkAndPrintErr(err)
+		// util.Printf("Encoding Have message")
 	case Bitfield:
-		util.Printf("Encoding BitField message")
+		// util.Printf("Encoding BitField message")
+		bitFieldBuf := msg.Bitfield
+		if (len(msg.Bitfield) % 8 != 0) {
+			// we need to pad the message with zeros
+			padBuf := make([]bool, len(msg.Bitfield) % 8)
+			// Make sure that the pad is "present"
+		  for i := 0; i < len(padBuf); i++ {
+				padBuf[i] = true
+			}
+			bitFieldBuf = append(msg.Bitfield, padBuf...)
+		}
+		err = binary.Write(buf, binary.BigEndian, int32(1 + (len(bitFieldBuf)/8)))
+		checkAndPrintErr(err)
+		err = binary.Write(buf, binary.BigEndian, msg.Type)
+		checkAndPrintErr(err)
+		err = binary.Write(buf, binary.BigEndian, bitFieldBuf)
+		checkAndPrintErr(err)
 	case Request:
-		util.Printf("Encoding Request message")
+		// util.Printf("Encoding Request message")
+		err = binary.Write(buf, binary.BigEndian, int32(13))
+		checkAndPrintErr(err)
+		err = binary.Write(buf, binary.BigEndian, msg.Type)
+		checkAndPrintErr(err)
+		err = binary.Write(buf, binary.BigEndian, msg.Index)
+		checkAndPrintErr(err)
+		err = binary.Write(buf, binary.BigEndian, msg.Begin)
+		checkAndPrintErr(err)
+		err = binary.Write(buf, binary.BigEndian, msg.Length)
 	case Piece:
-		util.Printf("Encoding Piece message")
+		// util.Printf("Encoding Piece message")
+		err = binary.Write(buf, binary.BigEndian, int32(9 + len(msg.Block)))
+		checkAndPrintErr(err)
+		err = binary.Write(buf, binary.BigEndian, msg.Type)
+		checkAndPrintErr(err)
+		err = binary.Write(buf, binary.BigEndian, msg.Index)
+		checkAndPrintErr(err)
+		err = binary.Write(buf, binary.BigEndian, msg.Begin)
+		checkAndPrintErr(err)
+		err = binary.Write(buf, binary.BigEndian, msg.Block)
 	case Cancel:
-		util.Printf("Encoding Cancel message")
+		// util.Printf("Encoding Cancel message")
+		err = binary.Write(buf, binary.BigEndian, int32(13))
+		checkAndPrintErr(err)
+		err = binary.Write(buf, binary.BigEndian, msg.Type)
+		checkAndPrintErr(err)
+		err = binary.Write(buf, binary.BigEndian, msg.Index)
+		checkAndPrintErr(err)
+		err = binary.Write(buf, binary.BigEndian, msg.Begin)
+		checkAndPrintErr(err)
+		err = binary.Write(buf, binary.BigEndian, msg.Length)
 	default:
 		util.Printf("Something went wrong")
 		return []byte{}
 	}
-	// fmt.Printf("% x", buf.Bytes())
-
 	return buf.Bytes()
+}
+
+func checkAndPrintErr(err error) {
+	if err != nil {
+		util.EPrintf("peerprotocol EncodePeerMessage: %s\n", err)
+	}
 }

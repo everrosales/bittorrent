@@ -20,6 +20,8 @@ var UnchokeBytes []byte = []byte{0x00, 0x00, 0x00, 0x01, 0x01}
 var InterestedBytes []byte = []byte{0x00, 0x00, 0x00, 0x01, 0x02}
 var NotInterestedBytes []byte = []byte{0x00, 0x00, 0x00, 0x01, 0x03}
 var HaveBytes []byte = []byte{0x00, 0x00, 0x00, 0x05, 0x04, 0x00, 0x00, 0x80, 0x00}
+// TODO: Bitfield message
+var RequestBytes []byte = []byte{}
 
 // PeerMessage structs of messages
 var KeepAliveMsg PeerMessage = PeerMessage{KeepAlive: true}
@@ -28,6 +30,8 @@ var UnchokeMsg PeerMessage = PeerMessage{Type: Unchoke}
 var InterestedMsg PeerMessage = PeerMessage{Type: Interested}
 var NotInterestedMsg PeerMessage = PeerMessage{Type: NotInterested}
 var HaveMsg PeerMessage = PeerMessage{Type: Have, Index: 32768}
+// TODO: Bitfield message
+var RequestMsg PeerMessage = PeerMessage{Type: Request, Index: 11, Begin: 20, Length: }
 
 func init() {
 	util.Debug = util.None
@@ -140,3 +144,7 @@ func TestEncodeChokeMessage(t *testing.T) {
 	}
 	util.EndTest()
 }
+
+
+// TODO: Peer Protocol now handles initializing peers. We should write
+//			 a few tests for that.

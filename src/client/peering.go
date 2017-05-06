@@ -266,9 +266,10 @@ func (cl *BTClient) messageHandler(conn net.Conn) {
 	if !ok {
 		// InitializePeer
 		// TODO: use the actual length len(cl.torrent.PieceHashes)
-		// TODO: Get the actual infoHash string and peerId string
-		// util.Printf("This is receiving a connection: %v\n", conn.RemoteAddr())
-		newPeer := btnet.InitializePeer(conn.RemoteAddr().(*net.TCPAddr), "01234567890123456789", "01234567890123456789", 10, conn.(*net.TCPConn))
+    // TODO: Get the actual infoHash string and peerId string
+		// TODO: we also need the length of bitlength
+    // util.Printf("This is receiving a connection: %v\n", conn.RemoteAddr())
+		newPeer :=  btnet.InitializePeer(conn.RemoteAddr().(*net.TCPAddr), "01234567890123456789", "01234567890123456789", 10, conn.(*net.TCPConn))
 		if len(newPeer.Addr.String()) < 3 {
 			conn.(*net.TCPConn).Close()
 			util.TPrintf("Dropping peer connection: Bad handshake\n")
