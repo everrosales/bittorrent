@@ -21,7 +21,9 @@ var InterestedBytes []byte = []byte{0x00, 0x00, 0x00, 0x01, 0x02}
 var NotInterestedBytes []byte = []byte{0x00, 0x00, 0x00, 0x01, 0x03}
 var HaveBytes []byte = []byte{0x00, 0x00, 0x00, 0x05, 0x04, 0x00, 0x00, 0x80, 0x00}
 // TODO: Bitfield message
-var RequestBytes []byte = []byte{}
+//																		msg Length				 type				index
+var RequestBytes []byte = []byte{0x00, 0x00, 0x00, 0x0d, 0x06, 0x00, 0x00, 0x00, 0x0b,
+																 0x00, 0x00, 0x01, 0x00,			 0x00, 0x00, 0x01, 0x08}
 
 // PeerMessage structs of messages
 var KeepAliveMsg PeerMessage = PeerMessage{KeepAlive: true}
@@ -31,7 +33,7 @@ var InterestedMsg PeerMessage = PeerMessage{Type: Interested}
 var NotInterestedMsg PeerMessage = PeerMessage{Type: NotInterested}
 var HaveMsg PeerMessage = PeerMessage{Type: Have, Index: 32768}
 // TODO: Bitfield message
-var RequestMsg PeerMessage = PeerMessage{Type: Request, Index: 11, Begin: 20, Length: }
+var RequestMsg PeerMessage = PeerMessage{Type: Request, Index: 11, Begin: 256, Length: 264}
 
 func init() {
 	util.Debug = util.None
@@ -53,10 +55,6 @@ func TestEncodeDecodeHandshake(t *testing.T) {
     t.Fail()
   }
   util.EndTest()
-}
-
-func TestDecodeHandshake(t *testing.T) {
-
 }
 
 func TestDecodeKeepAliveMessage(t *testing.T) {
@@ -145,6 +143,45 @@ func TestEncodeChokeMessage(t *testing.T) {
 	util.EndTest()
 }
 
+func TestEncodeUnchokeMessage(t *testing.T) {
+	util.StartTest("Testing encode Unchoke message...")
+	actual := EncodePeerMessage(UnchokeMsg)
+	expected := UnchokeBytes
+	if !util.ByteArrayEquals(actual, expected) {
+		t.Fatalf("Expected != actual")
+	}
+	util.EndTest()
+}
+
+func TestEncodeInterestedMessage(t *testing.T) {
+	util.StartTest("Testing encode Interested message...")
+	actual := EncodePeerMessage(InterestedMsg)
+	expected := InterestedBytes
+	if !util.ByteArrayEquals(actual, expected) {
+		t.Fatalf("expected != actual")
+	}
+	util.EndTest()
+}
+
+func TestEncodeNotInterestedMessage(t *testing.T) {
+	util.StartTest("Testing encode NotInterested message...")
+	actual := EncodePeerMessage(NotInterestedMsg)
+	expected := NotInterestedBytes
+	if !util.ByteArrayEquals(actual, expected) {
+		t.Fatalf("expected != actual")
+	}
+	util.EndTest()
+}
+
+func TestEncodeHaveMessage(t *testing.T) {
+	util.StartTest("Testing encode Have message...")
+	actual := EncodePeerMessage(HaveMsg)
+	expected := HaveBytes
+	if !util.ByteArrayEquals(actual, expected) {
+		t.Fatalf("expected != actual")
+	}
+	util.EndTest()
+}
 
 // TODO: Peer Protocol now handles initializing peers. We should write
 //			 a few tests for that.
