@@ -106,6 +106,24 @@ func ByteArrayEquals(first []byte, second []byte) bool {
 	return true
 }
 
+func BoolArrayEquals(first []bool, second[]bool) bool {
+	if first == nil && second == nil {
+		return true
+	}
+	if first == nil || second == nil {
+		return false
+	}
+	if len(first) != len(second) {
+		return false
+	}
+	for i := range first {
+		if first[i] != second[i] {
+			return false
+		}
+	}
+	return true
+}
+
 // from http://stackoverflow.com/questions/25686109/split-string-by-length-in-golang
 func SplitEveryN(s string, n int) []string {
 	sub := ""
@@ -132,4 +150,39 @@ func GenerateRandStr(length int) string {
 		panic(err)
 	}
 	return string(b[:length])
+}
+
+func BoolsToBytes(data []bool) []byte {
+	if (len(data) % 8 != 0) {
+		// we need to pad the message with zeros
+		padBuf := make([]bool, 8 - (len(data) % 8))
+		// the extra pad needs to be false (0-padded)
+		data = append(data, padBuf...)
+	}
+
+	if len(data) % 8 != 0 {
+		EPrintf("boolsToBytes: wtf")
+	}
+
+	output := make([]byte, len(data)/8)
+	for i := 0; i < len(data); i++ {
+		val := byte(0)
+		if (data[i]) {
+			val = byte(0x80)
+		}
+		output[i/8] = output[i/8] | (val >> uint(i % 8))
+	}
+	return output
+}
+
+func BytesToBools(data []byte) []bool {
+	output := make([]bool, len(data) * 8)
+	for i := 0; i < len(data) * 8; i++ {
+		mask := (byte(0x80) >> uint(i % 8))
+		if (data[i/8] & mask) > 0 {
+			output[i] = true
+		}
+		// We dont have to set the false bits because thats done for us by the make operation
+	}
+	return output
 }

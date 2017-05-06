@@ -211,7 +211,10 @@ func DecodePeerMessage(data []byte) PeerMessage {
 		peerMessage.Index = index
 		return peerMessage
 	case Bitfield:
-		util.Printf("Bitfield message\n")
+		bitfield := make([]byte, (msglength - 1))
+		err = binary.Read(buf, binary.BigEndian, &bitfield)
+		checkAndPrintErr(err)
+		peerMessage.Bitfield = util.BytesToBools(bitfield)
 	case Request:
 		// util.Printf("Request message\n")
 		var index int32
@@ -227,7 +230,6 @@ func DecodePeerMessage(data []byte) PeerMessage {
 		peerMessage.Begin = int(begin)
 		peerMessage.Length = int(length)
 	case Piece:
-		util.Printf("Piece message\n")
 		var index int32
 		var begin int32
 		block := make([]byte, msglength - 9)
@@ -241,7 +243,7 @@ func DecodePeerMessage(data []byte) PeerMessage {
 		peerMessage.Begin = int(begin)
 		peerMessage.Block = block
 	case Cancel:
-		util.Printf("Cancel message\n")
+		// util.Printf("Cancel message\n")
 		var index int32
 		var begin int32
 		var length int32
@@ -256,9 +258,10 @@ func DecodePeerMessage(data []byte) PeerMessage {
 		peerMessage.Length = int(length)
 	default:
 		util.Printf("Unsupported message\n")
+		return PeerMessage{}
 	}
 
-	return PeerMessage{}
+	return peerMessage
 }
 
 func EncodePeerMessage(msg PeerMessage) []byte {
@@ -312,17 +315,8 @@ func EncodePeerMessage(msg PeerMessage) []byte {
 		// util.Printf("Encoding Have message")
 	case Bitfield:
 		// util.Printf("Encoding BitField message")
-		bitFieldBuf := msg.Bitfield
-		if (len(msg.Bitfield) % 8 != 0) {
-			// we need to pad the message with zeros
-			padBuf := make([]bool, len(msg.Bitfield) % 8)
-			// Make sure that the pad is "present"
-		  for i := 0; i < len(padBuf); i++ {
-				padBuf[i] = true
-			}
-			bitFieldBuf = append(msg.Bitfield, padBuf...)
-		}
-		err = binary.Write(buf, binary.BigEndian, int32(1 + (len(bitFieldBuf)/8)))
+		bitFieldBuf := util.BoolsToBytes(msg.Bitfield)
+		err = binary.Write(buf, binary.BigEndian, int32(len(bitFieldBuf) + 1))
 		checkAndPrintErr(err)
 		err = binary.Write(buf, binary.BigEndian, msg.Type)
 		checkAndPrintErr(err)
@@ -336,9 +330,9 @@ func EncodePeerMessage(msg PeerMessage) []byte {
 		checkAndPrintErr(err)
 		err = binary.Write(buf, binary.BigEndian, msg.Index)
 		checkAndPrintErr(err)
-		err = binary.Write(buf, binary.BigEndian, msg.Begin)
+		err = binary.Write(buf, binary.BigEndian, int32(msg.Begin))
 		checkAndPrintErr(err)
-		err = binary.Write(buf, binary.BigEndian, msg.Length)
+		err = binary.Write(buf, binary.BigEndian, int32(msg.Length))
 	case Piece:
 		// util.Printf("Encoding Piece message")
 		err = binary.Write(buf, binary.BigEndian, int32(9 + len(msg.Block)))
@@ -347,7 +341,7 @@ func EncodePeerMessage(msg PeerMessage) []byte {
 		checkAndPrintErr(err)
 		err = binary.Write(buf, binary.BigEndian, msg.Index)
 		checkAndPrintErr(err)
-		err = binary.Write(buf, binary.BigEndian, msg.Begin)
+		err = binary.Write(buf, binary.BigEndian, int32(msg.Begin))
 		checkAndPrintErr(err)
 		err = binary.Write(buf, binary.BigEndian, msg.Block)
 	case Cancel:
@@ -358,9 +352,9 @@ func EncodePeerMessage(msg PeerMessage) []byte {
 		checkAndPrintErr(err)
 		err = binary.Write(buf, binary.BigEndian, msg.Index)
 		checkAndPrintErr(err)
-		err = binary.Write(buf, binary.BigEndian, msg.Begin)
+		err = binary.Write(buf, binary.BigEndian, int32(msg.Begin))
 		checkAndPrintErr(err)
-		err = binary.Write(buf, binary.BigEndian, msg.Length)
+		err = binary.Write(buf, binary.BigEndian, int32(msg.Length))
 	default:
 		util.Printf("Something went wrong")
 		return []byte{}
@@ -370,6 +364,6 @@ func EncodePeerMessage(msg PeerMessage) []byte {
 
 func checkAndPrintErr(err error) {
 	if err != nil {
-		util.EPrintf("peerprotocol EncodePeerMessage: %s\n", err)
+		util.EPrintf("peerprotocol: %s\n", err)
 	}
 }
