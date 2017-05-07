@@ -35,7 +35,7 @@ func StartTCPServer(addr string, handler func(*net.TCPConn)) {
 }
 
 func DoDial(addr *net.TCPAddr, data []byte) *net.TCPConn {
-    util.Printf("Dialing: %v", addr.String())
+    util.Printf("Dialing: %v\n", addr.String())
 	conn, err := net.DialTCP("tcp", nil, addr)
 	if err != nil {
 		// Cry

@@ -262,13 +262,23 @@ func (cl *BTClient) SetupPeerConnections(addr *net.TCPAddr, conn *net.TCPConn) {
     peerId := cl.peerId
     bitfieldLength := cl.numPieces
     peer := btnet.InitializePeer(addr, infoHash, peerId, bitfieldLength, conn, cl.PieceBitmap)
+    if (peer == nil) {
+        // We got a bad handshake so drop the connection
+        return
+    }
+    cl.mu.Lock()
     cl.peers[addr.String()] = peer
+    cl.mu.Unlock()
 
     // Start go routine that handles the closing of the tcp connection if we dont
     // get a keepAlive signal
     // Separate go routine for sending keepalive signals
     go func() {
         for {
+            cl.mu.Lock()
+            if peer == nil || peer.Conn.RemoteAddr() == nil {
+                return
+            }
             var msg btnet.PeerMessage
             select {
             case msg = <- peer.MsgQueue:
@@ -278,18 +288,28 @@ func (cl *BTClient) SetupPeerConnections(addr *net.TCPAddr, conn *net.TCPConn) {
             }
             data := btnet.EncodePeerMessage(msg)
             // if (!msg.KeepAlive) {
-                util.TPrintf("Sending encoded message, type: %v, data: %v\n", msg.Type, data)
+
+            util.TPrintf("Sending encoded message, type: %v, data: %v\n", msg.Type, data)
             // }
             // We dont need a lock if only this thread is sending out TCP messages
+            // if (peer.Conn == nil) {
+            //     util.EPrintf("FFS\n")
+            // }
+
+            util.Printf("peer.Conn.RemoteAddr(): %v\n", peer.Conn.RemoteAddr())
+            // peer.Conn.SetWriteDeadline(time.Now().Add(time.Millisecond * 500))
             _, err := peer.Conn.Write(data)
-            if err != nil {
+            if err != nil  {
                 // Connection is probably closed
                 // TODO: Not sure if this is the right way of checking this
-                if &peer.Conn != nil {
+                util.EPrintf("err: %v\n", err)
+                if peer.Conn.RemoteAddr() != nil {
+                    util.EPrintf("Closing the connection\n")
                     peer.Conn.Close()
                 }
                 break
             }
+            cl.mu.Unlock()
         }
     }()
 
@@ -300,9 +320,14 @@ func (cl *BTClient) SetupPeerConnections(addr *net.TCPAddr, conn *net.TCPConn) {
             case <-peer.KeepAlive:
                    // Do nothing, this is good
             case <-time.After(peerTimeout):
-                peer.Conn.Close()
+                cl.mu.Lock()
+                if (peer.Conn.RemoteAddr() != nil) {
+                    peer.Conn.Close()
+                    util.EPrintf("Closing the connection again\n")
+                }
                 delete(cl.peers, peer.Addr.String())
                 // cl.peers[addr] = nil
+                cl.mu.Unlock()
                 break
             }
         }
@@ -310,6 +335,9 @@ func (cl *BTClient) SetupPeerConnections(addr *net.TCPAddr, conn *net.TCPConn) {
 
     // Start another go routine to read stuff from that channel
     go func() {
+        if (peer.Conn.RemoteAddr() == nil) {
+            util.EPrintf("this is nil, ... dammit\n")
+        }
         cl.messageHandler(&peer.Conn)
     }()
 }
@@ -334,7 +362,9 @@ func (cl *BTClient) messageHandler(conn *net.TCPConn) {
 	// Check if this is a new connection
 	// If so we need to initialize the Peer
 	util.TPrintf("~~~ Got a connection! ~~~\n")
-
+    if (conn.RemoteAddr() == nil) {
+        return
+    }
 	peer, ok := cl.peers[conn.RemoteAddr().String()]
 	if !ok {
         // This internally calls messageHandler in a separate goRoutine

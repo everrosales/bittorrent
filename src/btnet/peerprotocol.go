@@ -87,7 +87,7 @@ func InitializePeer(addr *net.TCPAddr, infoHash string, peerId string, bitfieldL
         util.EPrintf("BAD handshake, killing the peer\n")
         // Badly formatted hsandshake, dont make the connection stick
         conn.Close()
-        return &Peer{}
+        return nil
     }
     // TODO: Send bitfield message
     message := PeerMessage{
