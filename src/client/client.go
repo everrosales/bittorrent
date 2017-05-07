@@ -48,7 +48,7 @@ type BTClient struct {
 	peers map[string]btnet.Peer // map from IP to Peer
 }
 
-func StartBTClient(ip string, port int, metadataPath string, persister *Persister) *BTClient {
+func StartBTClient(ip string, port int, metadataPath string, seedPath string, persister *Persister) *BTClient {
 
 	torrent := fs.ReadTorrent(metadataPath)
 
@@ -82,8 +82,10 @@ func StartBTClient(ip string, port int, metadataPath string, persister *Persiste
 
 	util.IPrintf("\nClient for %s listening on port %d\n", metadataPath, port)
 
+	if seedPath != "" {
+		cl.Seed(seedPath)
+	}
 	go cl.main()
-	// cl.listenForPeers()
 
 	return cl
 }
