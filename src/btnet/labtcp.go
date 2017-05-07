@@ -35,6 +35,7 @@ func StartTCPServer(addr string, handler func(*net.TCPConn)) {
 }
 
 func DoDial(addr *net.TCPAddr, data []byte) *net.TCPConn {
+    util.Printf("Dialing: %v", addr.String())
 	conn, err := net.DialTCP("tcp", nil, addr)
 	if err != nil {
 		// Cry
@@ -141,7 +142,7 @@ func ReadMessage(conn *net.TCPConn) []byte {
 	// 5) repeat 3
 
 	reader := bufio.NewReader(conn)
-    
+
 	// Grab the first 4 bytes
 	msgLength := make([]byte, 4)
 	for i := 0; i < 4; i++ {

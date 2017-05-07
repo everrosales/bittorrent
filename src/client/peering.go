@@ -255,50 +255,69 @@ func (cl *BTClient) sendHaveMessage(peer *btnet.Peer, index int, begin int, leng
 	cl.SendPeerMessage(&peer.Addr, message)
 }
 
+func (cl *BTClient) SetupPeerConnections(addr *net.TCPAddr, conn *net.TCPConn) {
+    // Try dialing
+    // connection := DoDial(addr, data)
+    infoHash := fs.GetInfoHash(fs.ReadTorrent(cl.torrentPath))
+    peerId := cl.peerId
+    bitfieldLength := cl.numPieces
+    peer := btnet.InitializePeer(addr, infoHash, peerId, bitfieldLength, conn, cl.PieceBitmap)
+    cl.peers[addr.String()] = peer
+
+    // Start go routine that handles the closing of the tcp connection if we dont
+    // get a keepAlive signal
+    // Separate go routine for sending keepalive signals
+    go func() {
+        for {
+            var msg btnet.PeerMessage
+            select {
+            case msg = <- peer.MsgQueue:
+                util.TPrintf("Received message from msgqueue - Type: %v\n", msg.Type)
+            case <-time.After(peerTimeout / 2):
+                msg = btnet.PeerMessage{KeepAlive: true}
+            }
+            data := btnet.EncodePeerMessage(msg)
+            // if (!msg.KeepAlive) {
+                util.TPrintf("Sending encoded message, type: %v, data: %v\n", msg.Type, data)
+            // }
+            // We dont need a lock if only this thread is sending out TCP messages
+            _, err := peer.Conn.Write(data)
+            if err != nil {
+                // Connection is probably closed
+                // TODO: Not sure if this is the right way of checking this
+                if &peer.Conn != nil {
+                    peer.Conn.Close()
+                }
+                break
+            }
+        }
+    }()
+
+    // KeepAlive loop
+    go func() {
+        for {
+            select {
+            case <-peer.KeepAlive:
+                   // Do nothing, this is good
+            case <-time.After(peerTimeout):
+                peer.Conn.Close()
+                delete(cl.peers, peer.Addr.String())
+                // cl.peers[addr] = nil
+                break
+            }
+        }
+    }()
+
+    // Start another go routine to read stuff from that channel
+    go func() {
+        cl.messageHandler(&peer.Conn)
+    }()
+}
+
 func (cl *BTClient) SendPeerMessage(addr *net.TCPAddr, message btnet.PeerMessage) {
 	peer, ok := cl.peers[addr.String()]
 	if !ok {
-		// Try dialing
-		// connection := DoDial(addr, data)
-		infoHash := fs.GetInfoHash(fs.ReadTorrent(cl.torrentPath))
-		peerId := cl.peerId
-		bitfieldLength := cl.numPieces
-		peer = btnet.InitializePeer(addr, infoHash, peerId, bitfieldLength, nil, cl.PieceBitmap)
-        cl.peers[addr.String()] = peer
-
-		// Start go routine that handles the closing of the tcp connection if we dont
-		// get a keepAlive signal
-		// Separate go routine for sending keepalive signals
-		go func() {
-			for {
-				var msg btnet.PeerMessage
-				select {
-				case msg = <- peer.MsgQueue:
-                    util.TPrintf("Received message from msgqueue: %v\n", msg)
-				case <-time.After(peerTimeout / 2):
-					msg = btnet.PeerMessage{KeepAlive: true}
-				}
-				data := btnet.EncodePeerMessage(msg)
-                // if (!msg.KeepAlive) {
-                    util.TPrintf("Sending encoded message, type: %v, data: %v\n", msg.Type, data)
-                // }
-                // We dont need a lock if only this thread is sending out TCP messages
-				_, err := peer.Conn.Write(data)
-				if err != nil {
-					// Connection is probably closed
-					// TODO: Not sure if this is the right way of checking this
-					if &peer.Conn != nil {
-						peer.Conn.Close()
-					}
-					break
-				}
-			}
-		}()
-        // Start another go routine to read stuff from that channel
-        go func() {
-            cl.messageHandler(&peer.Conn)
-        }()
-
+        cl.SetupPeerConnections(addr, nil)
 	}
 	peer.MsgQueue <- message
 }
@@ -318,39 +337,11 @@ func (cl *BTClient) messageHandler(conn *net.TCPConn) {
 
 	peer, ok := cl.peers[conn.RemoteAddr().String()]
 	if !ok {
-		// InitializePeer
-		infoHash := fs.GetInfoHash(fs.ReadTorrent(cl.torrentPath))
-		peerId := cl.peerId
-		bitfieldLength := cl.numPieces
-		newPeer := btnet.InitializePeer(conn.RemoteAddr().(*net.TCPAddr), infoHash, peerId, bitfieldLength, conn, cl.PieceBitmap)
-		if len(newPeer.Addr.String()) < 3 {
-			conn.Close()
-			util.TPrintf("Dropping peer connection: Bad handshake\n")
-			return
-		}
-		cl.peers[conn.RemoteAddr().String()] = newPeer
-
-		go func() {
-			for {
-				select {
-				case <-newPeer.KeepAlive:
-					// Do nothing, this is good
-				case <-time.After(peerTimeout):
-					newPeer.Conn.Close()
-					delete(cl.peers, newPeer.Addr.String())
-					// cl.peers[addr] = nil
-					break
-				}
-			}
-		}()
-
-        // go func() {
-        //     cl.messageHandler(&newPeer.Conn)
-        // }()
-        //
-		// return
+        // This internally calls messageHandler in a separate goRoutine
+		cl.SetupPeerConnections(conn.RemoteAddr().(*net.TCPAddr), conn)
+        return
 	}
-    peer, ok = cl.peers[conn.RemoteAddr().String()]
+    // peer, ok = cl.peers[conn.RemoteAddr().String()]
 
 	for ok {
 		// Process the message
