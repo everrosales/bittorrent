@@ -60,7 +60,7 @@ type Peer struct {
 }
 
 // Make sure to start a go routine to kill this connection
-func InitializePeer(addr *net.TCPAddr, infoHash string, peerId string, bitfieldLength int, conn *net.TCPConn, pieceBitmap []bool) Peer {
+func InitializePeer(addr *net.TCPAddr, infoHash string, peerId string, bitfieldLength int, conn *net.TCPConn, pieceBitmap []bool) *Peer {
 	// tcpAddr, err := net.ResolveTCPAddr("tcp", addr)
 	peer := Peer{}
 	// if err != nil {
@@ -83,18 +83,21 @@ func InitializePeer(addr *net.TCPAddr, infoHash string, peerId string, bitfieldL
     data := ReadHandshake(conn)
     handshake := DecodeHandshake(data)
     // TODO: Process the handshake and drop connection if needed
-		if (len(handshake.InfoHash) != 20) {
-			// Badly formatted hsandshake, dont make the connection stick
-			conn.Close()
-			return Peer{}
-		}
+    if (len(handshake.InfoHash) != 20) {
+        util.EPrintf("BAD handshake, killing the peer\n")
+        // Badly formatted hsandshake, dont make the connection stick
+        conn.Close()
+        return &Peer{}
+    }
     // TODO: Send bitfield message
-    	message := PeerMessage{
-    		Type:     Bitfield,
-    		Bitfield: pieceBitmap}
-    	// util.TPrintf("sending message - %v\n", message)
-        peer.MsgQueue <- message
-    	// cl.SendPeerMessage(&peer.Addr, message)
+    message := PeerMessage{
+        Type:     Bitfield,
+        Bitfield: pieceBitmap}
+    // util.TPrintf("sending message - %v\n", message)
+    util.TPrintf("Enqueuing bitfield message\n")
+    peer.MsgQueue <- message
+    util.TPrintf("Finished enqueuing the mesage\n")
+    // cl.SendPeerMessage(&peer.Addr, message)
 
   } else {
     handshake := Handshake{Pstr: BT_PROTOCOL, InfoHash: []byte(infoHash), PeerId: []byte(peerId)}
@@ -105,7 +108,7 @@ func InitializePeer(addr *net.TCPAddr, infoHash string, peerId string, bitfieldL
 
   }
 
-	return peer
+	return &peer
 }
 
 func DecodeHandshake(data []byte) Handshake {

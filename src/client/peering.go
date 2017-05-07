@@ -133,7 +133,7 @@ func (cl *BTClient) requestBlock(piece int, block int) {
 	cl.mu.Unlock()
 }
 
-func (cl *BTClient) sendBlock(index int, begin int, length int, peer btnet.Peer) {
+func (cl *BTClient) sendBlock(index int, begin int, length int, peer *btnet.Peer) {
 	if !cl.PieceBitmap[index] {
 		// we don't have this piece yet
 		return
@@ -213,7 +213,7 @@ func allTrue(arr []bool) bool {
 	return true
 }
 
-func (cl *BTClient) sendRequestMessage(peer btnet.Peer, index int, begin int, length int) {
+func (cl *BTClient) sendRequestMessage(peer *btnet.Peer, index int, begin int, length int) {
 	message := btnet.PeerMessage{
 		Type:   btnet.Piece,
 		Index:  int32(index),
@@ -223,7 +223,7 @@ func (cl *BTClient) sendRequestMessage(peer btnet.Peer, index int, begin int, le
 	cl.SendPeerMessage(&peer.Addr, message)
 }
 
-func (cl *BTClient) sendPieceMessage(peer btnet.Peer, index int, begin int, length int, data []byte) {
+func (cl *BTClient) sendPieceMessage(peer *btnet.Peer, index int, begin int, length int, data []byte) {
 	message := btnet.PeerMessage{
 		Type:   btnet.Piece,
 		Index:  int32(index),
@@ -243,7 +243,7 @@ func (cl *BTClient) sendPieceMessage(peer btnet.Peer, index int, begin int, leng
 // 	cl.SendPeerMessage(&peer.Addr, message)
 // }
 
-func (cl *BTClient) sendHaveMessage(peer btnet.Peer, index int, begin int, length int) {
+func (cl *BTClient) sendHaveMessage(peer *btnet.Peer, index int, begin int, length int) {
 	message := btnet.PeerMessage{
 		Type:   btnet.Have,
 		Index:  int32(index),
@@ -261,7 +261,7 @@ func (cl *BTClient) SendPeerMessage(addr *net.TCPAddr, message btnet.PeerMessage
 		infoHash := fs.GetInfoHash(fs.ReadTorrent(cl.torrentPath))
 		peerId := cl.peerId
 		bitfieldLength := cl.numPieces
-		peer := btnet.InitializePeer(addr, infoHash, peerId, bitfieldLength, nil, cl.PieceBitmap)
+		peer = btnet.InitializePeer(addr, infoHash, peerId, bitfieldLength, nil, cl.PieceBitmap)
 		cl.peers[addr.String()] = peer
 
 		// Start go routine that handles the closing of the tcp connection if we dont
@@ -272,11 +272,15 @@ func (cl *BTClient) SendPeerMessage(addr *net.TCPAddr, message btnet.PeerMessage
 				var msg btnet.PeerMessage
 				select {
 				case msg = <-peer.MsgQueue:
+                    util.TPrintf("Received message from msgqueue: %v\n", msg)
 				case <-time.After(peerTimeout / 2):
 					msg = btnet.PeerMessage{KeepAlive: true}
 				}
 				data := btnet.EncodePeerMessage(msg)
-				// We dont need a lock if only this thread is sending out TCP messages
+                // if (!msg.KeepAlive) {
+                    util.TPrintf("Sending encoded message, type: %v, data: %v\n", msg.Type, data)
+                // }
+                // We dont need a lock if only this thread is sending out TCP messages
 				_, err := peer.Conn.Write(data)
 				if err != nil {
 					// Connection is probably closed

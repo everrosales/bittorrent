@@ -44,7 +44,7 @@ type BTClient struct {
 	neededPieces chan int
 
 	// This string is going to be the TCP addr
-	peers map[string]btnet.Peer // map from IP to Peer
+	peers map[string]*btnet.Peer // map from IP to Peer
 }
 
 func StartBTClient(ip string, port int, metadataPath string, seedPath string, persister *Persister) *BTClient {
@@ -76,7 +76,7 @@ func StartBTClient(ip string, port int, metadataPath string, seedPath string, pe
 
 	cl.neededPieces = make(chan int)
 
-	cl.peers = make(map[string]btnet.Peer)
+	cl.peers = make(map[string]*btnet.Peer)
 
 	util.IPrintf("\nClient for %s listening on port %d\n", metadataPath, port)
 
