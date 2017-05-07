@@ -94,7 +94,7 @@ func IndexHandler(tr *BTTracker, w http.ResponseWriter, r *http.Request) (int, e
 	peers := tr.getPeerList()
 	tr.mu.Unlock()
 
-	util.TPrintf("[%s] req %s (ip: %s), %d peer(s)\n", reqTime.Format("2006-01-02 15:04:05.9999"), peerIdStr, ip, numPeers)
+	util.TPrintf("[%s] req %s (ip: %s:%s), %d peer(s)\n", reqTime.Format("2006-01-02 15:04:05.9999"), peerIdStr, ip, port, numPeers)
 	return writeSuccess(w, DefaultInterval, peers)
 }
 
