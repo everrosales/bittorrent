@@ -264,7 +264,6 @@ func TestManyPeers(t *testing.T) {
 	util.EndTest()
 }
 
-// TODO: add tests for peer heartbeats
 func TestMultiplePeersTimeout(t *testing.T) {
 	util.StartTest("Testing multiple peers with timeout...")
 	var err1, err2, err3 error

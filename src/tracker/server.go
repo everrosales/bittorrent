@@ -31,14 +31,12 @@ type FailureResponse struct {
 }
 
 func writeSuccess(w http.ResponseWriter, interval int, peers []map[string]string) (int, error) {
-	// TODO: escape response
 	resp := fs.Encode(SuccessResponse{interval, peers})
 	fmt.Fprintf(w, resp)
 	return 200, nil
 }
 
 func writeFailure(w http.ResponseWriter, format string, a ...interface{}) (int, error) {
-	// TODO: escape response
 	resp := fs.Encode(FailureResponse{fmt.Sprintf(format, a...)})
 	fmt.Fprintf(w, resp)
 	return 200, nil

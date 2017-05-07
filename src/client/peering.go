@@ -5,6 +5,7 @@ import (
 	"bytes"
 	"encoding/gob"
 	"errors"
+	"fs"
 	"io/ioutil"
 	"net"
 	"net/http"
@@ -12,7 +13,6 @@ import (
 	"strconv"
 	"time"
 	"util"
-	"fs"
 )
 
 func peerTimeout() time.Duration {
@@ -25,7 +25,7 @@ func (cl *BTClient) startServer() {
 	btnet.StartTCPServer(cl.ip+":"+cl.port, cl.messageHandler)
 }
 
-type requestParams struct {
+type trackerReq struct {
 	peerId     string
 	ip         string
 	port       string
@@ -36,7 +36,13 @@ type requestParams struct {
 	status     status
 }
 
-func sendRequest(addr string, req *requestParams) ([]byte, error) {
+type trackerRes struct {
+	Interval int                 `bencode:"interval"`
+	Peers    []map[string]string `bencode:"peers"`
+	Failure  string              `bencode:"failure reason"`
+}
+
+func sendRequest(addr string, req *trackerReq) ([]byte, error) {
 	url := addr + "/?peer_id=" + url.QueryEscape(req.peerId) +
 		"&port=" + req.port + "&ip=" + req.ip + "&uploaded=" +
 		strconv.Itoa(req.uploaded) + "&downloaded=" + strconv.Itoa(req.downloaded) +
@@ -59,14 +65,26 @@ func sendRequest(addr string, req *requestParams) ([]byte, error) {
 func (cl *BTClient) contactTracker(baseUrl string) {
 	// TODO: update uploaded, downloaded, and left
 	cl.mu.Lock()
-	request := requestParams{cl.peerId, cl.ip, cl.port, 0, 0, 0, cl.infoHash, cl.status}
+	request := trackerReq{cl.peerId, cl.ip, cl.port, 0, 0, 0, cl.infoHash, cl.status}
 	cl.mu.Unlock()
 	util.IPrintf("Contacting tracker at %s\n", baseUrl)
-	res, err := sendRequest(baseUrl, &request)
+	byteRes, err := sendRequest(baseUrl, &request)
 	if err != nil {
 		util.EPrintf("Receiving from tracker: %s\n", err)
 	}
-	util.IPrintf("res %s\n", res)
+	res := trackerRes{}
+	fs.Decode(string(byteRes), &res)
+	if res.Failure != "" {
+		util.EPrintf("Received error from tracker: %s\n", res.Failure)
+	}
+	cl.mu.Lock()
+	cl.heartbeatInterval = res.Interval
+	cl.mu.Unlock()
+
+	for _, p := range res.Peers {
+		util.IPrintf("peerId %s, ip %s, port %s\n", p["peer id"], p["ip"], p["port"])
+	}
+
 }
 
 // func (cl *BTClient) listenForPeers() {
@@ -204,7 +222,7 @@ func (cl *BTClient) sendRequestMessage(peer btnet.Peer, index int, begin int, le
 		Type:   btnet.Piece,
 		Index:  int32(index),
 		Begin:  begin,
-		Length: length }
+		Length: length}
 	util.TPrintf("sending message - %v\n", message)
 	cl.SendPeerMessage(&peer.Addr, message)
 }
@@ -215,15 +233,15 @@ func (cl *BTClient) sendPieceMessage(peer btnet.Peer, index int, begin int, leng
 		Index:  int32(index),
 		Begin:  begin,
 		Length: length,
-		Block:  data }
+		Block:  data}
 	util.TPrintf("sending message - %v\n", message)
 	cl.SendPeerMessage(&peer.Addr, message)
 }
 
 func (cl *BTClient) sendBitfieldMessage(peer btnet.Peer) {
 	message := btnet.PeerMessage{
-		Type:   btnet.Bitfield,
-		Bitfield: cl.PieceBitmap }
+		Type:     btnet.Bitfield,
+		Bitfield: cl.PieceBitmap}
 	util.TPrintf("sending message - %v\n", message)
 	cl.SendPeerMessage(&peer.Addr, message)
 }
@@ -233,7 +251,7 @@ func (cl *BTClient) sendHaveMessage(peer btnet.Peer, index int, begin int, lengt
 		Type:   btnet.Have,
 		Index:  int32(index),
 		Begin:  begin,
-		Length: length }
+		Length: length}
 	util.TPrintf("sending message - %v\n", message)
 	cl.SendPeerMessage(&peer.Addr, message)
 }
@@ -294,7 +312,7 @@ func (cl *BTClient) messageHandler(conn net.Conn) {
 		infoHash := fs.GetInfoHash(fs.ReadTorrent(cl.torrentPath))
 		peerId := cl.peerId
 		bitfieldLength := cl.numPieces
-		newPeer :=  btnet.InitializePeer(conn.RemoteAddr().(*net.TCPAddr), infoHash, peerId, bitfieldLength, conn.(*net.TCPConn))
+		newPeer := btnet.InitializePeer(conn.RemoteAddr().(*net.TCPAddr), infoHash, peerId, bitfieldLength, conn.(*net.TCPConn))
 		if len(newPeer.Addr.String()) < 3 {
 			conn.(*net.TCPConn).Close()
 			util.TPrintf("Dropping peer connection: Bad handshake\n")

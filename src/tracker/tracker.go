@@ -78,6 +78,7 @@ func (tr *BTTracker) CheckShutdown() bool {
 	return false
 }
 
+// get peer list to use in tracker response
 func (tr *BTTracker) getPeerList() []map[string]string {
 	peerList := [](map[string]string){}
 	count := 0
@@ -93,7 +94,6 @@ func (tr *BTTracker) getPeerList() []map[string]string {
 	return peerList
 }
 
-// TODO: set timeout for peers in list
 func (tr *BTTracker) watchPeers() {
 	for {
 		timeNow := time.Now()
