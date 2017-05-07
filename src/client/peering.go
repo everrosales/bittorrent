@@ -124,7 +124,7 @@ func (cl *BTClient) connectToPeer(addr string) {
 func (cl *BTClient) requestBlock(piece int, block int) {
 	cl.mu.Lock()
 	for addr, peer := range cl.peers {
-		util.TPrintf("peer bitfield: %v\n", peer.Bitfield)
+		// util.TPrintf("peer bitfield: %v\n", peer.Bitfield)
 		if peer.Bitfield[piece] && !peer.Status.PeerChoking {
 			util.Printf("requesting piece %d block %d from peer %s\n", piece, block, addr)
 			begin := block * fs.BlockSize
@@ -264,7 +264,7 @@ func (cl *BTClient) SendPeerMessage(addr *net.TCPAddr, message btnet.PeerMessage
 		peerId := cl.peerId
 		bitfieldLength := cl.numPieces
 		peer = btnet.InitializePeer(addr, infoHash, peerId, bitfieldLength, nil, cl.PieceBitmap)
-		cl.peers[addr.String()] = peer
+        cl.peers[addr.String()] = peer
 
 		// Start go routine that handles the closing of the tcp connection if we dont
 		// get a keepAlive signal
@@ -273,7 +273,7 @@ func (cl *BTClient) SendPeerMessage(addr *net.TCPAddr, message btnet.PeerMessage
 			for {
 				var msg btnet.PeerMessage
 				select {
-				case msg = <-peer.MsgQueue:
+				case msg = <- peer.MsgQueue:
                     util.TPrintf("Received message from msgqueue: %v\n", msg)
 				case <-time.After(peerTimeout / 2):
 					msg = btnet.PeerMessage{KeepAlive: true}
@@ -344,8 +344,13 @@ func (cl *BTClient) messageHandler(conn *net.TCPConn) {
 			}
 		}()
 
-		return
+        // go func() {
+        //     cl.messageHandler(&newPeer.Conn)
+        // }()
+        //
+		// return
 	}
+    peer, ok = cl.peers[conn.RemoteAddr().String()]
 
 	for ok {
 		// Process the message
@@ -366,6 +371,7 @@ func (cl *BTClient) messageHandler(conn *net.TCPConn) {
 
 		// Really anytime we receive a message we should treat this as
 		// a KeepAlive message
+        util.TPrintf("\nRecieving message: %v\n\n", peerMessage)
 		peer.KeepAlive <- true
 
 		switch peerMessage.Type {
