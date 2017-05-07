@@ -335,19 +335,19 @@ func (cl *BTClient) SetupPeerConnections(addr *net.TCPAddr, conn *net.TCPConn) {
 
     // Start another go routine to read stuff from that channel
     go func() {
-        if (peer.Conn.RemoteAddr() == nil) {
-            util.EPrintf("this is nil, ... dammit\n")
-        }
         cl.messageHandler(&peer.Conn)
     }()
 }
 
 func (cl *BTClient) SendPeerMessage(addr *net.TCPAddr, message btnet.PeerMessage) {
-	peer, ok := cl.peers[addr.String()]
+    // cl.mu.Lock()
+    peer, ok := cl.peers[addr.String()]
 	if !ok {
         cl.SetupPeerConnections(addr, nil)
+        peer, _ = cl.peers[addr.String()]
 	}
 	peer.MsgQueue <- message
+    // cl.mu.Unlock()
 }
 
 func (cl *BTClient) messageHandler(conn *net.TCPConn) {
