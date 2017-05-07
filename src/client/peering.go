@@ -118,7 +118,6 @@ func (cl *BTClient) connectToPeer(addr string) {
 	if conn != nil {
 	}
 	// Send hello message to peer
-
 }
 
 func (cl *BTClient) requestBlock(piece int, block int) {
@@ -266,7 +265,6 @@ func (cl *BTClient) SendPeerMessage(addr *net.TCPAddr, message btnet.PeerMessage
 
 		// Start go routine that handles the closing of the tcp connection if we dont
 		// get a keepAlive signal
-
 		// Separate go routine for sending keepalive signals
 		go func() {
 			for {
@@ -289,11 +287,16 @@ func (cl *BTClient) SendPeerMessage(addr *net.TCPAddr, message btnet.PeerMessage
 				}
 			}
 		}()
+        // Start another go routine to read stuff from that channel
+        go func() {
+            cl.messageHandler(&peer.Conn)
+        }()
+
 	}
 	peer.MsgQueue <- message
 }
 
-func (cl *BTClient) messageHandler(conn net.Conn) {
+func (cl *BTClient) messageHandler(conn *net.TCPConn) {
 	// Max message size: 2^17 = 131072 (128KB)
 	// buf := make([]byte, 131072)
 	// bytesRead, err := conn.(*net.TCPConn).Read(buf)
@@ -312,9 +315,9 @@ func (cl *BTClient) messageHandler(conn net.Conn) {
 		infoHash := fs.GetInfoHash(fs.ReadTorrent(cl.torrentPath))
 		peerId := cl.peerId
 		bitfieldLength := cl.numPieces
-		newPeer := btnet.InitializePeer(conn.RemoteAddr().(*net.TCPAddr), infoHash, peerId, bitfieldLength, conn.(*net.TCPConn))
+		newPeer := btnet.InitializePeer(conn.RemoteAddr().(*net.TCPAddr), infoHash, peerId, bitfieldLength, conn)
 		if len(newPeer.Addr.String()) < 3 {
-			conn.(*net.TCPConn).Close()
+			conn.Close()
 			util.TPrintf("Dropping peer connection: Bad handshake\n")
 			return
 		}
@@ -339,7 +342,7 @@ func (cl *BTClient) messageHandler(conn net.Conn) {
 
 	for ok {
 		// Process the message
-		buf := btnet.ReadMessage(conn.(*net.TCPConn))
+		buf := btnet.ReadMessage(conn)
 
 		peerMessage := btnet.DecodePeerMessage(buf)
 		// Massive switch case that would handle incoming messages depending on message type

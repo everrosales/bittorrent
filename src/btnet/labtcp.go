@@ -11,16 +11,20 @@ import (
 	"util"
 )
 
-func StartTCPServer(addr string, handler func(net.Conn)) {
+func StartTCPServer(addr string, handler func(*net.TCPConn)) {
 	util.TPrintf("Starting the TCP Server...\n")
-	ln, err := net.Listen("tcp", addr)
+    tcpAddr, err := net.ResolveTCPAddr("tcp", addr)
+    if err != nil {
+        util.EPrintf("Labtcp StartTCPServer: %s", err)
+    }
+	ln, err := net.ListenTCP("tcp", tcpAddr)
 	if err != nil {
 		// complain about things dying
 		util.EPrintf("labtcp StartTCPServer: %s\n", err)
 	}
-	go func(ln net.Listener) {
+	go func(ln *net.TCPListener) {
 		for {
-			conn, err := ln.Accept()
+			conn, err := ln.AcceptTCP()
 			if err != nil {
 				// complain about a thing
 				util.EPrintf("labtcp StartTCPServer: %s\n", err)
