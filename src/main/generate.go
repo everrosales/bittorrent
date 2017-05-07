@@ -1,13 +1,14 @@
 package main
 
+
 import (
 	"flag"
+	"util"
 	"fs"
 	"strings"
-	"util"
 )
 
-func main() {
+func xmain() {
 	fileFlag := flag.String("file", "", "Input file path (required)")
 	outFlag := flag.String("out", "", "Output torrent file name (default is 'out.torrent')")
 	urlFlag := flag.String("url", "", "URL of tracker (required)")
