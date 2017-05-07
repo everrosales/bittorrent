@@ -76,7 +76,7 @@ func (cl *BTClient) contactTracker(baseUrl string) {
 //   //TODO: Send initial hello packets
 // }
 
-func (cl *BTClient) seed() {
+func (cl *BTClient) trackerHeartbeat() {
 	for {
 		if cl.CheckShutdown() {
 			return

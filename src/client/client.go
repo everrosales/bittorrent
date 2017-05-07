@@ -155,7 +155,7 @@ func (cl *BTClient) downloadPieces() {
 }
 
 func (cl *BTClient) main() {
-	go cl.seed()
+	go cl.trackerHeartbeat()
 	cl.startServer()
 
 	go func() {
