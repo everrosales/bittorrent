@@ -104,7 +104,13 @@ func TestTwoPeers(t *testing.T) {
 	second := makeTestClient(6669)
 	util.Printf("Started peer 2\n")
 	util.Wait(1000)
+    tcpAddr, _ := net.ResolveTCPAddr("tcp", "localhost:6669")
+    first.SendPeerMessage(tcpAddr, btnet.PeerMessage{KeepAlive: true})
+    util.Wait(5000)
 	// TODO: Make sure they do something interest
+    if len(second.peers) < 1 {
+        t.Fatalf("second peer list does not include the first")
+    }
 
 	first.Kill()
 	second.Kill()

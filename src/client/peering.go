@@ -259,7 +259,6 @@ func (cl *BTClient) sendHaveMessage(peer btnet.Peer, index int, begin int, lengt
 func (cl *BTClient) SendPeerMessage(addr *net.TCPAddr, message btnet.PeerMessage) {
 	peer, ok := cl.peers[addr.String()]
 	if !ok {
-		// TODO: Something went wrong
 		// Try dialing
 		// connection := DoDial(addr, data)
 		infoHash := fs.GetInfoHash(fs.ReadTorrent(cl.torrentPath))
@@ -274,23 +273,27 @@ func (cl *BTClient) SendPeerMessage(addr *net.TCPAddr, message btnet.PeerMessage
 		// Separate go routine for sending keepalive signals
 		go func() {
 			for {
-				time.Sleep(peerTimeout() / 2)
-				msg := btnet.PeerMessage{KeepAlive: true}
+				var msg btnet.PeerMessage
+				select {
+				case msg = <- peer.MsgQueue:
+				case <- time.After(peerTimeout() /2):
+					msg = btnet.PeerMessage{KeepAlive: true}
+				}
 				data := btnet.EncodePeerMessage(msg)
-
+				// We dont need a lock if only this thread is sending out TCP messages
 				_, err := peer.Conn.Write(data)
 				if err != nil {
 					// Connection is probably closed
+					// TODO: Not sure if this is the right way of checking this
+					if &peer.Conn != nil {
+						peer.Conn.Close()
+					}
 					break
 				}
 			}
 		}()
 	}
-	// send data
-	data := btnet.EncodePeerMessage(message)
-	peer.Conn.Write(data)
-	// tcpAddr, _ := net.ResolveTCPAddr("tcp", (*addr).String())
-	// connection.Close()
+	peer.MsgQueue <- message
 }
 
 func (cl *BTClient) messageHandler(conn net.Conn) {
@@ -356,29 +359,30 @@ func (cl *BTClient) messageHandler(conn net.Conn) {
 		// a KeepAlive message
 		peer.KeepAlive <- true
 
-		switch peerMessage.Type {
-		case btnet.Choke:
-			peer.Status.PeerChoking = true
-		case btnet.Unchoke:
-			peer.Status.PeerChoking = false
-		case btnet.Interested:
-			peer.Status.PeerInterested = true
-		case btnet.NotInterested:
-			peer.Status.PeerInterested = false
-		case btnet.Have:
-			peer.Bitfield[peerMessage.Index] = true
-		case btnet.Bitfield:
-			peer.Bitfield = peerMessage.Bitfield
-		case btnet.Request:
-			cl.sendBlock(int(peerMessage.Index), peerMessage.Begin, peerMessage.Length, peer)
-		case btnet.Piece:
-			cl.saveBlock(int(peerMessage.Index), peerMessage.Begin, peerMessage.Length, peerMessage.Block)
-		case btnet.Cancel:
-			// TODO
-		default:
-			// keepalive
-			// TODO?
-		}
-		_, ok = cl.peers[conn.RemoteAddr().String()]
-	}
+        switch peerMessage.Type {
+        case btnet.Choke:
+            peer.Status.PeerChoking = true
+        case btnet.Unchoke:
+            peer.Status.PeerChoking = false
+        case btnet.Interested:
+            peer.Status.PeerInterested = true
+        case btnet.NotInterested:
+            peer.Status.PeerInterested = false
+        case btnet.Have:
+            peer.Bitfield[peerMessage.Index] = true
+        case btnet.Bitfield:
+            peer.Bitfield = peerMessage.Bitfield
+        case btnet.Request:
+            cl.sendBlock(int(peerMessage.Index), peerMessage.Begin, peerMessage.Length, peer)
+        case btnet.Piece:
+            cl.saveBlock(int(peerMessage.Index), peerMessage.Begin, peerMessage.Length, peerMessage.Block)
+        case btnet.Cancel:
+            // TODO
+        default:
+            // keepalive
+            // TODO?
+        }
+        // Update okay to make sure that we still have a connection
+        _, ok = cl.peers[conn.RemoteAddr().String()]
+    }
 }

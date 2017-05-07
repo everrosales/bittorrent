@@ -55,7 +55,8 @@ type Peer struct {
 	Bitfield []bool
 	Addr     net.TCPAddr
   Conn     net.TCPConn
-  KeepAlive chan bool
+	MsgQueue chan PeerMessage
+	KeepAlive chan bool
 }
 
 // Make sure to start a go routine to kill this connection
@@ -73,7 +74,8 @@ func InitializePeer(addr *net.TCPAddr, infoHash string, peerId string, bitfieldL
 	peer.Status.AmInterested = false
 	peer.Status.PeerChoking = true
 	peer.Status.PeerInterested = false
-  peer.KeepAlive = make(chan bool, 100)
+    peer.MsgQueue = make(chan PeerMessage, 100)
+	peer.KeepAlive = make(chan bool, 100)
   // Create handshake
   // Handshake{Pstr: BT_PROTOCOL, InfoHash: []byte(infoHash), PeerId: []byte(peerId)}
   if (conn != nil) {
@@ -87,19 +89,20 @@ func InitializePeer(addr *net.TCPAddr, infoHash string, peerId string, bitfieldL
 			return Peer{}
 		}
   } else {
-    data := EncodeHandshake(Handshake{Pstr: BT_PROTOCOL, InfoHash: []byte(infoHash), PeerId: []byte(peerId)})
+    handshake := Handshake{Pstr: BT_PROTOCOL, InfoHash: []byte(infoHash), PeerId: []byte(peerId)}
+    data := EncodeHandshake(handshake)
 		// Sending data
-		peer.Conn = *DoDial(addr, data)
+	peer.Conn = *DoDial(addr, data)
   }
 
 	return peer
 }
 
 func DecodeHandshake(data []byte) Handshake {
-	if (len(data) < 1) {
-		util.EPrintf("Badly formatted data")
-		return Handshake{}
-	}
+    if (len(data) < 1) {
+        util.EPrintf("Badly formatted data")
+        return Handshake{}
+    }
 
   pstrbuf := make([]byte, 1)
   pstrbuf[0] = data[0]
@@ -132,7 +135,7 @@ func DecodeHandshake(data []byte) Handshake {
 }
 
 func EncodeHandshake(handshake Handshake) []byte {
-  pstrlen := int8(len(handshake.Pstr))
+  pstrlen := uint8(len(handshake.Pstr))
   buf := make([]byte, 49 + int(pstrlen))
   buf[0] = byte(pstrlen)
 
@@ -144,7 +147,7 @@ func EncodeHandshake(handshake Handshake) []byte {
   infoHashIndex := 9 + int(pstrlen)
   // infoHash = []byte(handshake.InfoHash)
   for i:= infoHashIndex; i < infoHashIndex + 20; i++ {
-    buf[i] = handshake.InfoHash[i - infoHashIndex]
+      buf[i] = handshake.InfoHash[i - infoHashIndex]
   }
   peerIdIndex := infoHashIndex + 20
   for i := peerIdIndex; i < peerIdIndex + 20; i++ {

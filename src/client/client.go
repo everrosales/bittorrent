@@ -42,7 +42,6 @@ type BTClient struct {
 	blockBitmap map[int][]bool
 
 	neededPieces chan int
-	sendQueue chan btnet.PeerMessage
 
 	// This string is going to be the TCP addr
 	peers map[string]btnet.Peer // map from IP to Peer
@@ -76,7 +75,6 @@ func StartBTClient(ip string, port int, metadataPath string, seedPath string, pe
 	cl.loadPieces(persister.ReadState())
 
 	cl.neededPieces = make(chan int)
-	cl.sendQueue = make(chan btnet.PeerMessage)
 
 	cl.peers = make(map[string]btnet.Peer)
 
