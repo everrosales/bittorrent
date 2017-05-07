@@ -244,7 +244,7 @@ func (cl *BTClient) SendPeerMessage(addr *net.TCPAddr, message btnet.PeerMessage
 		// TODO: Something went wrong
 		// Try dialing
 		// connection := DoDial(addr, data)
-		infoHash := fs.GetInfoHash(cl.torrent)
+		infoHash := fs.GetInfoHash(fs.ReadTorrent(cl.torrentPath))
 		peerId := cl.peerId
 		bitfieldLength := cl.numPieces
 		peer := btnet.InitializePeer(addr, infoHash, peerId, bitfieldLength, nil)
@@ -291,7 +291,7 @@ func (cl *BTClient) messageHandler(conn net.Conn) {
 	peer, ok := cl.peers[conn.RemoteAddr().String()]
 	if !ok {
 		// InitializePeer
-		infoHash := fs.GetInfoHash(cl.torrent)
+		infoHash := fs.GetInfoHash(fs.ReadTorrent(cl.torrentPath))
 		peerId := cl.peerId
 		bitfieldLength := cl.numPieces
 		newPeer :=  btnet.InitializePeer(conn.RemoteAddr().(*net.TCPAddr), infoHash, peerId, bitfieldLength, conn.(*net.TCPConn))

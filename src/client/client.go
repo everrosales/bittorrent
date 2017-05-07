@@ -7,6 +7,8 @@ import (
 	"strconv"
 	"sync"
 	"util"
+	"math/rand"
+	"time"
 )
 
 type status string
@@ -158,9 +160,9 @@ func (cl *BTClient) main() {
 	go cl.trackerHeartbeat()
 	cl.startServer()
 
+	rand.Seed(time.Now().UnixNano())
 	go func() {
-		for i := range cl.Pieces {
-			// TODO randomize
+		for i := range rand.Perm(cl.numPieces) {
 			cl.neededPieces <- i
 		}
 	}()
