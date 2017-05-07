@@ -33,7 +33,7 @@ type trackerReq struct {
 	status     status
 }
 
-type trackerRes struct {
+type TrackerRes struct {
 	Interval int                 `bencode:"interval"`
 	Peers    []map[string]string `bencode:"peers"`
 	Failure  string              `bencode:"failure reason"`
@@ -59,7 +59,7 @@ func sendRequest(addr string, req *trackerReq) ([]byte, error) {
 	return bodyBytes, nil
 }
 
-func (cl *BTClient) contactTracker(baseUrl string) {
+func (cl *BTClient) contactTracker(baseUrl string) TrackerRes {
 	// TODO: update uploaded, downloaded, and left
 	cl.mu.Lock()
 	request := trackerReq{cl.peerId, cl.ip, cl.port, 0, 0, 0, cl.infoHash, cl.status}
@@ -68,7 +68,7 @@ func (cl *BTClient) contactTracker(baseUrl string) {
 	if err != nil {
 		util.EPrintf("Received error sending to tracker: %s\n", err)
 	}
-	res := trackerRes{}
+	res := TrackerRes{}
 	fs.Decode(string(byteRes), &res)
 	if res.Failure != "" {
 		util.EPrintf("Received error from tracker: %s\n", res.Failure)
@@ -77,11 +77,7 @@ func (cl *BTClient) contactTracker(baseUrl string) {
 	cl.mu.Lock()
 	cl.heartbeatInterval = res.Interval
 	cl.mu.Unlock()
-
-	for _, p := range res.Peers {
-		util.TPrintf("peerId %s, ip %s, port %s\n", p["peer id"], p["ip"], p["port"])
-	}
-
+	return res
 }
 
 // func (cl *BTClient) listenForPeers() {
@@ -96,12 +92,17 @@ func (cl *BTClient) trackerHeartbeat() {
 		if cl.CheckShutdown() {
 			return
 		}
+		res := cl.contactTracker(cl.torrent.TrackerUrl)
+		for _, p := range res.Peers {
+			util.TPrintf("peerId %s, ip %s, port %s\n", p["peer id"], p["ip"], p["port"])
+			addr, err := net.ResolveTCPAddr("tcp", p["ip"] + ":" + p["port"])
+			if err != nil {
+				panic(err)
+			}
+			cl.SendPeerMessage(addr, btnet.PeerMessage{KeepAlive: true})
+		}
+
 		cl.mu.Lock()
-		go cl.contactTracker(cl.torrent.TrackerUrl)
-
-		//TODO: only here for compilation
-		// fmt.Println(file)
-
 		wait := cl.heartbeatInterval * 1000
 		cl.mu.Unlock()
 		util.Wait(wait)
@@ -123,8 +124,9 @@ func (cl *BTClient) connectToPeer(addr string) {
 func (cl *BTClient) requestBlock(piece int, block int) {
 	cl.mu.Lock()
 	for addr, peer := range cl.peers {
+		util.TPrintf("peer bitfield: %v\n", peer.Bitfield)
 		if peer.Bitfield[piece] && !peer.Status.PeerChoking {
-			util.Printf("requesting piece %d block %d from peer %s", piece, block, addr)
+			util.Printf("requesting piece %d block %d from peer %s\n", piece, block, addr)
 			begin := block * fs.BlockSize
 			cl.sendRequestMessage(peer, piece, begin, fs.BlockSize)
 		}
@@ -331,10 +333,10 @@ func (cl *BTClient) messageHandler(conn *net.TCPConn) {
 		go func() {
 			for {
 				select {
-				case <-peer.KeepAlive:
+				case <-newPeer.KeepAlive:
 					// Do nothing, this is good
 				case <-time.After(peerTimeout):
-					peer.Conn.Close()
+					newPeer.Conn.Close()
 					delete(cl.peers, newPeer.Addr.String())
 					// cl.peers[addr] = nil
 					break
