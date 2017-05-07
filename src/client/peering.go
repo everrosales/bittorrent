@@ -234,13 +234,14 @@ func (cl *BTClient) sendPieceMessage(peer btnet.Peer, index int, begin int, leng
 	cl.SendPeerMessage(&peer.Addr, message)
 }
 
-func (cl *BTClient) sendBitfieldMessage(peer btnet.Peer) {
-	message := btnet.PeerMessage{
-		Type:     btnet.Bitfield,
-		Bitfield: cl.PieceBitmap}
-	util.TPrintf("sending message - %v\n", message)
-	cl.SendPeerMessage(&peer.Addr, message)
-}
+// TODO: this is being moved
+// func (cl *BTClient) sendBitfieldMessage(peer btnet.Peer) {
+// 	message := btnet.PeerMessage{
+// 		Type:     btnet.Bitfield,
+// 		Bitfield: cl.PieceBitmap}
+// 	util.TPrintf("sending message - %v\n", message)
+// 	cl.SendPeerMessage(&peer.Addr, message)
+// }
 
 func (cl *BTClient) sendHaveMessage(peer btnet.Peer, index int, begin int, length int) {
 	message := btnet.PeerMessage{
@@ -260,7 +261,7 @@ func (cl *BTClient) SendPeerMessage(addr *net.TCPAddr, message btnet.PeerMessage
 		infoHash := fs.GetInfoHash(fs.ReadTorrent(cl.torrentPath))
 		peerId := cl.peerId
 		bitfieldLength := cl.numPieces
-		peer := btnet.InitializePeer(addr, infoHash, peerId, bitfieldLength, nil)
+		peer := btnet.InitializePeer(addr, infoHash, peerId, bitfieldLength, nil, cl.PieceBitmap)
 		cl.peers[addr.String()] = peer
 
 		// Start go routine that handles the closing of the tcp connection if we dont
@@ -315,7 +316,7 @@ func (cl *BTClient) messageHandler(conn *net.TCPConn) {
 		infoHash := fs.GetInfoHash(fs.ReadTorrent(cl.torrentPath))
 		peerId := cl.peerId
 		bitfieldLength := cl.numPieces
-		newPeer := btnet.InitializePeer(conn.RemoteAddr().(*net.TCPAddr), infoHash, peerId, bitfieldLength, conn)
+		newPeer := btnet.InitializePeer(conn.RemoteAddr().(*net.TCPAddr), infoHash, peerId, bitfieldLength, conn, cl.PieceBitmap)
 		if len(newPeer.Addr.String()) < 3 {
 			conn.Close()
 			util.TPrintf("Dropping peer connection: Bad handshake\n")
@@ -342,7 +343,9 @@ func (cl *BTClient) messageHandler(conn *net.TCPConn) {
 
 	for ok {
 		// Process the message
+        util.TPrintf("Client-port: %v\n", cl.port)
 		buf := btnet.ReadMessage(conn)
+        util.TPrintf("Finished reading\n")
 
 		peerMessage := btnet.DecodePeerMessage(buf)
 		// Massive switch case that would handle incoming messages depending on message type

@@ -60,7 +60,7 @@ type Peer struct {
 }
 
 // Make sure to start a go routine to kill this connection
-func InitializePeer(addr *net.TCPAddr, infoHash string, peerId string, bitfieldLength int, conn *net.TCPConn) Peer {
+func InitializePeer(addr *net.TCPAddr, infoHash string, peerId string, bitfieldLength int, conn *net.TCPConn, pieceBitmap []bool) Peer {
 	// tcpAddr, err := net.ResolveTCPAddr("tcp", addr)
 	peer := Peer{}
 	// if err != nil {
@@ -88,11 +88,21 @@ func InitializePeer(addr *net.TCPAddr, infoHash string, peerId string, bitfieldL
 			conn.Close()
 			return Peer{}
 		}
+    // TODO: Send bitfield message
+    	message := PeerMessage{
+    		Type:     Bitfield,
+    		Bitfield: pieceBitmap}
+    	// util.TPrintf("sending message - %v\n", message)
+        peer.MsgQueue <- message
+    	// cl.SendPeerMessage(&peer.Addr, message)
+
   } else {
     handshake := Handshake{Pstr: BT_PROTOCOL, InfoHash: []byte(infoHash), PeerId: []byte(peerId)}
     data := EncodeHandshake(handshake)
 		// Sending data
 	peer.Conn = *DoDial(addr, data)
+    // Read bitfield message that gets sent back
+
   }
 
 	return peer
@@ -214,6 +224,7 @@ func DecodePeerMessage(data []byte) PeerMessage {
 		peerMessage.Index = index
 		return peerMessage
 	case Bitfield:
+        util.TPrintf("Deconding bitfield message")
 		bitfield := make([]byte, (msglength - 1))
 		err = binary.Read(buf, binary.BigEndian, &bitfield)
 		checkAndPrintErr(err)

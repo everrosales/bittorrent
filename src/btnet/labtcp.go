@@ -141,7 +141,7 @@ func ReadMessage(conn *net.TCPConn) []byte {
 	// 5) repeat 3
 
 	reader := bufio.NewReader(conn)
-
+    
 	// Grab the first 4 bytes
 	msgLength := make([]byte, 4)
 	for i := 0; i < 4; i++ {
