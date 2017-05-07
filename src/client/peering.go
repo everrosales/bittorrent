@@ -3,8 +3,6 @@ package btclient
 import (
 	"btnet"
 	"bytes"
-	"crypto/sha1"
-	"encoding/base64"
 	"encoding/gob"
 	"errors"
 	"io/ioutil"
@@ -14,19 +12,13 @@ import (
 	"strconv"
 	"time"
 	"util"
+	"fs"
 )
-
-type Block []byte
-
-type Piece struct {
-	blocks []Block
-}
 
 func peerTimeout() time.Duration {
 	return time.Millisecond * 2000
 }
 
-const BlockSize int = 16384
 const DialTimeout = time.Millisecond * 100
 
 func (cl *BTClient) startServer() {
@@ -114,62 +106,68 @@ func (cl *BTClient) connectToPeer(addr string) {
 
 }
 
+func (cl *BTClient) requestBlock(piece int, block int) {
+	cl.mu.Lock()
+	for addr, peer := range cl.peers {
+		if peer.Bitfield[piece] && !peer.Status.PeerChoking {
+			util.Printf("requesting piece %d block %d from peer %s", piece, block, addr)
+			begin := block * fs.BlockSize
+			cl.sendRequestMessage(peer, piece, begin, fs.BlockSize)
+		}
+	}
+
+	cl.mu.Unlock()
+}
+
 func (cl *BTClient) sendBlock(index int, begin int, length int, peer btnet.Peer) {
 	if !cl.PieceBitmap[index] {
 		// we don't have this piece yet
 		return
 	}
-	if length != BlockSize {
+	if length != fs.BlockSize {
 		// the requester is using a different block size
 		// deny the request for simplicity
 		return
 	}
-	if begin%BlockSize != 0 {
+	if begin%fs.BlockSize != 0 {
 		return
 	}
-	blockIndex := begin / BlockSize
-	data := cl.Pieces[index].blocks[blockIndex]
+	blockIndex := begin / fs.BlockSize
+	util.TPrintf("sending piece %d, block %d", index, blockIndex)
+	data := cl.Pieces[index].Blocks[blockIndex]
 	go cl.sendPieceMessage(peer, index, begin, length, data)
 }
 
 func (cl *BTClient) saveBlock(index int, begin int, length int, block []byte) {
-	if begin%BlockSize != 0 {
+	if begin%fs.BlockSize != 0 {
 		return
 	}
-	if length < BlockSize {
+	if length < fs.BlockSize {
 		return
 	}
-	blockIndex := begin / BlockSize
-	cl.Pieces[index].blocks[blockIndex] = block[:BlockSize]
+	blockIndex := begin / fs.BlockSize
+	util.TPrintf("saving piece %d, block %d", index, blockIndex)
+	cl.Pieces[index].Blocks[blockIndex] = block[:fs.BlockSize]
 
 	if _, ok := cl.blockBitmap[index]; !ok {
-		cl.blockBitmap[index] = make([]bool, cl.numBlocks, cl.numBlocks)
+		cl.blockBitmap[index] = make([]bool, cl.numBlocks(index), cl.numBlocks(index))
 	}
 	cl.blockBitmap[index][blockIndex] = true
 
 	if allTrue(cl.blockBitmap[index]) {
 		// hash and save piece
-		if cl.Pieces[index].hash() != cl.torrent.PieceHashes[index] {
+		if cl.Pieces[index].Hash() != cl.torrent.PieceHashes[index] {
 			delete(cl.blockBitmap, index)
 			return
 		}
 		cl.PieceBitmap[index] = true
 		cl.persistPieces()
 	}
-}
 
-func (piece *Piece) hash() string {
-	allBytes := []byte{}
-	for _, block := range piece.blocks {
-		allBytes = append(allBytes, block...)
+	for _, peer := range cl.peers {
+		// send have message
+		cl.sendHaveMessage(peer, index, begin, length)
 	}
-	hash := make([]byte, 20)
-	actualHash := sha1.Sum(allBytes)
-
-	for i := 0; i < 20; i++ {
-		hash[i] = actualHash[i]
-	}
-	return base64.URLEncoding.EncodeToString(hash)
 }
 
 func (cl *BTClient) persistPieces() {
@@ -201,15 +199,43 @@ func allTrue(arr []bool) bool {
 	return true
 }
 
+func (cl *BTClient) sendRequestMessage(peer btnet.Peer, index int, begin int, length int) {
+	message := btnet.PeerMessage{
+		Type:   btnet.Piece,
+		Index:  int32(index),
+		Begin:  begin,
+		Length: length }
+	util.TPrintf("sending message - %v\n", message)
+	cl.SendPeerMessage(&peer.Addr, message)
+}
+
 func (cl *BTClient) sendPieceMessage(peer btnet.Peer, index int, begin int, length int, data []byte) {
 	message := btnet.PeerMessage{
 		Type:   btnet.Piece,
 		Index:  int32(index),
 		Begin:  begin,
 		Length: length,
-		Block:  data}
+		Block:  data }
 	util.TPrintf("sending message - %v\n", message)
-	// TODO send message
+	cl.SendPeerMessage(&peer.Addr, message)
+}
+
+func (cl *BTClient) sendBitfieldMessage(peer btnet.Peer) {
+	message := btnet.PeerMessage{
+		Type:   btnet.Bitfield,
+		Bitfield: cl.PieceBitmap }
+	util.TPrintf("sending message - %v\n", message)
+	cl.SendPeerMessage(&peer.Addr, message)
+}
+
+func (cl *BTClient) sendHaveMessage(peer btnet.Peer, index int, begin int, length int) {
+	message := btnet.PeerMessage{
+		Type:   btnet.Have,
+		Index:  int32(index),
+		Begin:  begin,
+		Length: length }
+	util.TPrintf("sending message - %v\n", message)
+	cl.SendPeerMessage(&peer.Addr, message)
 }
 
 func (cl *BTClient) SendPeerMessage(addr *net.TCPAddr, message btnet.PeerMessage) {

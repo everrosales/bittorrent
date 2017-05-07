@@ -3,7 +3,6 @@ package btclient
 import (
 	"btnet"
 	"fs"
-	"math"
 	// "net"
 	"strconv"
 	"sync"
@@ -36,10 +35,12 @@ type BTClient struct {
 	shutdown    chan bool
 
 	numPieces   int
-	numBlocks   int
-	Pieces      []Piece
+	Pieces      []fs.Piece
 	PieceBitmap []bool
 	blockBitmap map[int][]bool
+
+	neededPieces chan int
+	sendQueue chan btnet.PeerMessage
 
 	// This string is going to be the TCP addr
 	peers map[string]btnet.Peer // map from IP to Peer
@@ -64,14 +65,16 @@ func StartBTClient(ip string, port int, metadataPath string, persister *Persiste
 	cl.shutdown = make(chan bool)
 
 	cl.numPieces = len(cl.torrent.PieceHashes)
-	cl.numBlocks = int(math.Ceil(float64(cl.torrent.PieceLen / int64(BlockSize))))
-	cl.Pieces = make([]Piece, cl.numPieces, cl.numPieces)
-	for _, piece := range cl.Pieces {
-		piece.blocks = make([]Block, cl.numBlocks, cl.numBlocks)
+	cl.Pieces = make([]fs.Piece, cl.numPieces, cl.numPieces)
+	for i, piece := range cl.Pieces {
+		piece.Blocks = make([]fs.Block, cl.numBlocks(i), cl.numBlocks(i))
 	}
-	cl.PieceBitmap = make([]bool, cl.numBlocks, cl.numBlocks)
+	cl.PieceBitmap = make([]bool, cl.numPieces, cl.numPieces)
 	cl.blockBitmap = make(map[int][]bool)
 	cl.loadPieces(persister.ReadState())
+
+	cl.neededPieces = make(chan int)
+	cl.sendQueue = make(chan btnet.PeerMessage)
 
 	cl.peers = make(map[string]btnet.Peer)
 
@@ -83,8 +86,25 @@ func StartBTClient(ip string, port int, metadataPath string, persister *Persiste
 	return cl
 }
 
+func (cl *BTClient) Seed(file string) {
+	cl.mu.Lock()
+	cl.Pieces = fs.SplitIntoPieces(file, int(cl.torrent.PieceLen))
+	for i := range cl.PieceBitmap{
+		cl.PieceBitmap[i] = true
+	}
+	cl.persistPieces()
+	cl.mu.Unlock()
+}
+
 func (cl *BTClient) Kill() {
-	close(cl.shutdown)
+	select {
+	case _, ok := <-cl.shutdown:
+		if ok {
+			close(cl.shutdown)
+		}
+	default:
+		// channel already closed
+	}
 }
 
 // returns true if the client has been ordered to shut down
@@ -99,13 +119,62 @@ func (cl *BTClient) CheckShutdown() bool {
 	return false
 }
 
-func (cl *BTClient) main() {
-	go cl.seed()
-	cl.startServer()
+func (cl *BTClient) downloadPiece(piece int) {
+	if _, ok := cl.blockBitmap[piece]; !ok {
+		cl.blockBitmap[piece] = make([]bool, cl.numBlocks(piece), cl.numBlocks(piece))
+	}
+	for i:=0; i<cl.numBlocks(piece); i++ {
+		go cl.requestBlock(piece, i)
+	}
+}
+
+func (cl *BTClient) downloadPieces() {
 	for {
 		if cl.CheckShutdown() {
 			return
 		}
-		util.Wait(10)
+		piece := <- cl.neededPieces
+
+		cl.mu.Lock()
+		if !cl.PieceBitmap[piece] {
+			cl.downloadPiece(piece)
+		}
+		cl.mu.Unlock()
+
+		util.Wait(200)
+
+		cl.mu.Lock()
+		if !cl.PieceBitmap[piece] {
+			// piece still not downloaded, add it back to queue
+			go func() {
+				cl.neededPieces <- piece
+			}()
+		}
+		cl.mu.Unlock()
 	}
+}
+
+func (cl *BTClient) main() {
+	go cl.seed()
+	cl.startServer()
+
+	go func() {
+		for i := range cl.Pieces {
+			// TODO randomize
+			cl.neededPieces <- i
+		}
+	}()
+
+	go cl.downloadPieces()
+
+	for {
+		if cl.CheckShutdown() {
+			return
+		}
+		util.Wait(1000)
+	}
+}
+
+func (cl *BTClient) numBlocks(piece int) int {
+	return fs.NumBlocksInPiece(piece, int(cl.torrent.PieceLen), cl.torrent.GetLength())
 }

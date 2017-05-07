@@ -5,13 +5,16 @@ import (
 	"flag"
 	"tracker"
 	"util"
+	"os"
+	"io/ioutil"
 )
 
 func main() {
 	// TODO: add utility for making a .torrent file
 	clientFlag := flag.Bool("client", false, "Start client for torrent")
 	trackerFlag := flag.Bool("tracker", false, "Start tracker for torrent")
-	fileFlag := flag.String("file", "", "Torrent file (required)")
+	fileFlag := flag.String("file", "", "Torrent (.torrent) file (required)")
+	seedFlag := flag.String("seed", "", "The file for the client to seed (client only)")
 	debugFlag := flag.String("debug", "None", "Debug level [None|Info|Trace]")
 	portFlag := flag.Int("port", 8000, "Port (default 8000)")
 	flag.Parse()
@@ -45,15 +48,28 @@ func main() {
 		util.EPrintf("Select either client or tracker.\n")
 		return
 	} else if *trackerFlag {
+		if *seedFlag != "" {
+			util.EPrintf("Trackers cannot seed files.\n")
+			return
+		}
 		tr := bttracker.StartBTTracker(*fileFlag, *portFlag)
 		for !tr.CheckShutdown() {
 		}
 		return
 	} else if *clientFlag {
 		// StartBTClient(ip string, port int, metadataPath string, persister *Persister)
-		cl := btclient.StartBTClient("localhost", *portFlag, *fileFlag, btclient.MakePersister(*fileFlag+"_download"))
+		tmpFile, err := ioutil.TempFile(".", *fileFlag+"_download")
+		if err != nil {
+			panic(err)
+		}
+
+		cl := btclient.StartBTClient("localhost", *portFlag, *fileFlag, btclient.MakePersister(tmpFile.Name()))
+		if *seedFlag != "" {
+			cl.Seed(*seedFlag)
+		}
 		for !cl.CheckShutdown() {
 		}
+		os.Remove(tmpFile.Name())
 		return
 	}
 

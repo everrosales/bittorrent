@@ -33,6 +33,14 @@ type FileData struct {
 	Path   []string
 }
 
+func (md *Metadata) GetLength() int {
+	length := 0
+	for _, file := range md.Files {
+		length += int(file.Length)
+	}
+	return length
+}
+
 // Open a .torrent file and decodne its contents
 func ReadTorrent(path string) Torrent {
 	fileBytes, err := ioutil.ReadFile(path)
