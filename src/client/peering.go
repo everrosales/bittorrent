@@ -244,9 +244,9 @@ func (cl *BTClient) SendPeerMessage(addr *net.TCPAddr, message btnet.PeerMessage
 		// TODO: Something went wrong
 		// Try dialing
 		// connection := DoDial(addr, data)
-		infoHash := ""
-		peerId := ""
-		bitfieldLength := 0
+		infoHash := fs.GetInfoHash(cl.torrent)
+		peerId := cl.peerId
+		bitfieldLength := cl.numPieces
 		peer := btnet.InitializePeer(addr, infoHash, peerId, bitfieldLength, nil)
 		cl.peers[addr.String()] = peer
 
@@ -291,11 +291,10 @@ func (cl *BTClient) messageHandler(conn net.Conn) {
 	peer, ok := cl.peers[conn.RemoteAddr().String()]
 	if !ok {
 		// InitializePeer
-		// TODO: use the actual length len(cl.torrent.PieceHashes)
-    // TODO: Get the actual infoHash string and peerId string
-		// TODO: we also need the length of bitlength
-    // util.Printf("This is receiving a connection: %v\n", conn.RemoteAddr())
-		newPeer :=  btnet.InitializePeer(conn.RemoteAddr().(*net.TCPAddr), "01234567890123456789", "01234567890123456789", 10, conn.(*net.TCPConn))
+		infoHash := fs.GetInfoHash(cl.torrent)
+		peerId := cl.peerId
+		bitfieldLength := cl.numPieces
+		newPeer :=  btnet.InitializePeer(conn.RemoteAddr().(*net.TCPAddr), infoHash, peerId, bitfieldLength, conn.(*net.TCPConn))
 		if len(newPeer.Addr.String()) < 3 {
 			conn.(*net.TCPConn).Close()
 			util.TPrintf("Dropping peer connection: Bad handshake\n")

@@ -56,7 +56,7 @@ func StartBTClient(ip string, port int, metadataPath string, persister *Persiste
 	cl.port = strconv.Itoa(port)
 	cl.torrentPath = metadataPath
 	cl.torrent = fs.Read(metadataPath) // metadata
-	cl.peerId = util.GenerateRandStr(20)
+	cl.peerId = "-QQ6824-" + util.GenerateRandStr(12)
 	cl.infoHash = fs.GetInfoHash(torrent)
 	cl.status = Started
 	cl.heartbeatInterval = 5
