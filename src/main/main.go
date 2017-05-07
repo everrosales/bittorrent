@@ -63,10 +63,7 @@ func main() {
 			panic(err)
 		}
 
-		cl := btclient.StartBTClient("localhost", *portFlag, *fileFlag, btclient.MakePersister(tmpFile.Name()))
-		if *seedFlag != "" {
-			cl.Seed(*seedFlag)
-		}
+		cl := btclient.StartBTClient("localhost", *portFlag, *fileFlag, *seedFlag, btclient.MakePersister(tmpFile.Name()))
 		for !cl.CheckShutdown() {
 		}
 		os.Remove(tmpFile.Name())
