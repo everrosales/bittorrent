@@ -124,6 +124,7 @@ func (cl *BTClient) CheckShutdown() bool {
 }
 
 func (cl *BTClient) downloadPiece(piece int) {
+	util.TPrintf("need to download piece %d\n", piece)
 	if _, ok := cl.blockBitmap[piece]; !ok {
 		cl.blockBitmap[piece] = make([]bool, cl.numBlocks(piece), cl.numBlocks(piece))
 	}
@@ -153,13 +154,15 @@ func (cl *BTClient) downloadPieces() {
 		cl.mu.Lock()
 		// util.Printf("Got downloadPieces lock v2\n")
 		if !cl.PieceBitmap[piece] {
+			util.TPrintf("piece was not downloaded")
 			// piece still not downloaded, add it back to queue
 			go func() {
+				util.TPrintf("adding piece back to queue")
 				cl.neededPieces <- piece
+				util.TPrintf("added piece back to queue")
 			}()
 		}
 		cl.mu.Unlock()
-		util.Wait(200)
 	}
 }
 
@@ -170,6 +173,7 @@ func (cl *BTClient) main() {
 	rand.Seed(time.Now().UnixNano())
 	go func() {
 		for i := range rand.Perm(cl.numPieces) {
+			util.TPrintf("adding piece %d to needed queue\n", i)
 			cl.neededPieces <- i
 		}
 	}()
