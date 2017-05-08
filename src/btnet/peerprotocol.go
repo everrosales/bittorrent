@@ -71,9 +71,9 @@ func InitializePeer(addr *net.TCPAddr, infoHash string, peerId string, bitfieldL
 	// peer.Addr = *tcpAddr
 	peer.Addr = *addr
 	peer.Bitfield = make([]bool, bitfieldLength)
-	peer.Status.AmChoking = true
+	peer.Status.AmChoking = false
 	peer.Status.AmInterested = false
-	peer.Status.PeerChoking = true
+	peer.Status.PeerChoking = false
 	peer.Status.PeerInterested = false
 	peer.MsgQueue = make(chan PeerMessage, 100)
 	peer.KeepAlive = make(chan bool, 100)

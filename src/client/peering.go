@@ -236,7 +236,7 @@ func allTrue(arr []bool) bool {
 
 func (cl *BTClient) sendRequestMessage(peer *btnet.Peer, index int, begin int, length int) {
 	message := btnet.PeerMessage{
-		Type:   btnet.Piece,
+		Type:   btnet.Request,
 		Index:  int32(index),
 		Begin:  begin,
 		Length: length}
@@ -292,7 +292,7 @@ func (cl *BTClient) SetupPeerConnections(addr *net.TCPAddr, conn *net.TCPConn) {
             // util.Printf("Got msgQueue lock\n")
             if peer == nil || peer.Conn.RemoteAddr() == nil {
                 // util.Printf("Remote conncetion closed?\n")
-                cl.mu.Unlock()
+                // cl.mu.Unlock()
                 return
             }
             var msg btnet.PeerMessage
@@ -305,8 +305,8 @@ func (cl *BTClient) SetupPeerConnections(addr *net.TCPAddr, conn *net.TCPConn) {
             data := btnet.EncodePeerMessage(msg)
             // if (!msg.KeepAlive) {
 
-            util.TPrintf("Sending encoded message from: %v, to: %v, type: %v, data: %v\n",
-                         peer.Conn.LocalAddr().String(), peer.Conn.RemoteAddr().String(), msg.Type, data)
+            util.TPrintf("Sending encoded message from: %v, to: %v, type: %v\n",
+                         peer.Conn.LocalAddr().String(), peer.Conn.RemoteAddr().String(), msg.Type)
             // }
             // We dont need a lock if only this thread is sending out TCP messages
             // if (peer.Conn == nil) {
@@ -324,7 +324,7 @@ func (cl *BTClient) SetupPeerConnections(addr *net.TCPAddr, conn *net.TCPConn) {
                     // util.EPrintf("Closing the connection\n")
                     peer.Conn.Close()
                 }
-                cl.mu.Unlock()
+                // cl.mu.Unlock()
                 return
             }
             util.Printf("Sent message type: %v\n", msg.Type)
@@ -409,7 +409,7 @@ func (cl *BTClient) messageHandler(conn *net.TCPConn) {
             return
         }
 		peerMessage := btnet.DecodePeerMessage(buf, cl.torrent)
-        util.TPrintf("Received PeerMessage, type: %v\n%v\n", peerMessage.Type, peerMessage)
+        util.TPrintf("Received PeerMessage, type: %v\n", peerMessage.Type)
 		// Massive switch case that would handle incoming messages depending on message type
 
 		// peerMessage := btnet.PeerMessage{}  // empty for now, TODO
@@ -441,8 +441,10 @@ func (cl *BTClient) messageHandler(conn *net.TCPConn) {
 			case btnet.Bitfield:
 				peer.Bitfield = peerMessage.Bitfield
 			case btnet.Request:
+				util.TPrintf("received request msg\n")
 				cl.sendBlock(int(peerMessage.Index), peerMessage.Begin, peerMessage.Length, peer)
 			case btnet.Piece:
+				util.TPrintf("received piece msg\n")
 				cl.saveBlock(int(peerMessage.Index), peerMessage.Begin, peerMessage.Length, peerMessage.Block)
 			case btnet.Cancel:
 				// TODO
