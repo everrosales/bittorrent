@@ -226,7 +226,7 @@ func DecodePeerMessage(data []byte) PeerMessage {
 		peerMessage.Index = index
 		return peerMessage
 	case Bitfield:
-        util.TPrintf("Deconding bitfield message")
+        util.TPrintf("Decoding bitfield message")
 		bitfield := make([]byte, (msglength - 1))
 		err = binary.Read(buf, binary.BigEndian, &bitfield)
 		checkAndPrintErr(err)

@@ -317,7 +317,7 @@ func (cl *BTClient) SetupPeerConnections(addr *net.TCPAddr, conn *net.TCPConn) {
                 cl.mu.Unlock()
                 return
             }
-            util.Printf("Sent message\n")
+            util.Printf("Sent message type: %v\n", msg.Type)
             cl.mu.Unlock()
         }
     }()
@@ -399,8 +399,8 @@ func (cl *BTClient) messageHandler(conn *net.TCPConn) {
             util.EPrintf("%s\n",err)
             return
         }
-        util.TPrintf("Received PeerMessage\n")
 		peerMessage := btnet.DecodePeerMessage(buf)
+        util.TPrintf("Received PeerMessage, type: %v\n%v\n", peerMessage.Type, peerMessage)
 		// Massive switch case that would handle incoming messages depending on message type
 
 		// peerMessage := btnet.PeerMessage{}  // empty for now, TODO

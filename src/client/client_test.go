@@ -62,6 +62,13 @@ func TestClientTCPServerNice(t *testing.T) {
 	}
     util.Printf("Passed first bit\n")
 
+    returnedData, err := btnet.ReadMessage(connection)
+    decodedMsg := btnet.DecodePeerMessage(returnedData)
+    // util.TPrintf("msg: %v", decodedMsg)
+    if (err != nil || decodedMsg.Type != 5) {
+        util.EPrintf("Did not recieve bitfield message\n%v\n", decodedMsg)
+        t.Fail()
+    }
     // connection.Read
 
 	msg := btnet.PeerMessage{Type: btnet.Interested}
