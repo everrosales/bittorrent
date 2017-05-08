@@ -5,6 +5,7 @@ import (
 	"encoding/binary"
 	"net"
 	"util"
+    "fs"
 )
 
 const BT_PROTOCOL string = "BitTorrent protocol"
@@ -76,36 +77,44 @@ func InitializePeer(addr *net.TCPAddr, infoHash string, peerId string, bitfieldL
 	peer.Status.PeerInterested = false
 	peer.MsgQueue = make(chan PeerMessage, 100)
 	peer.KeepAlive = make(chan bool, 100)
-	// Create handshake
-	// Handshake{Pstr: BT_PROTOCOL, InfoHash: []byte(infoHash), PeerId: []byte(peerId)}
-	if conn != nil && conn.RemoteAddr() != nil {
-		// This happens if we are not the ones initializing the communication
-		data := ReadHandshake(conn)
-		handshake := DecodeHandshake(data)
-		// TODO: Process the handshake and drop connection if needed
-		if len(handshake.InfoHash) != 20 {
-			util.EPrintf("CR: BAD handshake, killing the peer\n")
-			// Badly formatted hsandshake, dont make the connection stick
-			conn.Close()
-			return nil
-		}
-		// TODO: Send bitfield message
-		message := PeerMessage{
-			Type:     Bitfield,
-			Bitfield: pieceBitmap}
-		// util.TPrintf("sending message - %v\n", message)
-		// util.TPrintf("Enqueuing bitfield message\n")
-		peer.MsgQueue <- message
-		// util.TPrintf("Finished enqueuing the mesage\n")
-		// cl.SendPeerMessage(&peer.Addr, message)
-		peer.Conn = *conn
-	} else {
-		handshake := Handshake{Pstr: BT_PROTOCOL, InfoHash: []byte(infoHash), PeerId: []byte(peerId)}
-		data := EncodeHandshake(handshake)
+  // Create handshake
+  // Handshake{Pstr: BT_PROTOCOL, InfoHash: []byte(infoHash), PeerId: []byte(peerId)}
+  if (conn != nil && conn.RemoteAddr() != nil) {
+    // This happens if we are not the ones initializing the communication
+    data := ReadHandshake(conn)
+    handshake := DecodeHandshake(data)
+    // TODO: Process the handshake and drop connection if needed
+    if (len(handshake.InfoHash) != 20) {
+        util.EPrintf("CR: BAD handshake, killing the peer\n")
+        // Badly formatted hsandshake, dont make the connection stick
+        conn.Close()
+        return nil
+    }
+    // TODO: Send bitfield message
+    message := PeerMessage{
+        Type:     Bitfield,
+        Bitfield: pieceBitmap}
+    // util.TPrintf("sending message - %v\n", message)
+    util.TPrintf("Enqueuing bitfield message %v\n", pieceBitmap)
+    peer.MsgQueue <- message
+    // util.TPrintf("Finished enqueuing the mesage\n")
+    // cl.SendPeerMessage(&peer.Addr, message)
+    peer.Conn = *conn
+  } else {
+    handshake := Handshake{Pstr: BT_PROTOCOL, InfoHash: []byte(infoHash), PeerId: []byte(peerId)}
+    data := EncodeHandshake(handshake)
 		// Sending data
-		peer.Conn = *DoDial(addr, data)
-		// Read bitfield message that gets sent back
-	}
+	peer.Conn = *DoDial(addr, data)
+
+    message := PeerMessage{
+        Type:     Bitfield,
+        Bitfield: pieceBitmap}
+        util.TPrintf("Enqueuing bitfield message %v\n", pieceBitmap)
+    // util.TPrintf("sending message - %v\n", message)
+    // util.TPrintf("Enqueuing bitfield message\n")
+    peer.MsgQueue <- message
+    // Read bitfield message that gets sent back
+  }
 
 	return &peer
 }
@@ -169,7 +178,7 @@ func EncodeHandshake(handshake Handshake) []byte {
 }
 
 // fill in a PeerMessage struct from an array of bytes
-func DecodePeerMessage(data []byte) PeerMessage {
+func DecodePeerMessage(data []byte, metadata fs.Metadata) PeerMessage {
 
 	// messageType := data[0]
 	var msglength int32
@@ -230,7 +239,8 @@ func DecodePeerMessage(data []byte) PeerMessage {
 		bitfield := make([]byte, (msglength - 1))
 		err = binary.Read(buf, binary.BigEndian, &bitfield)
 		checkAndPrintErr(err)
-		peerMessage.Bitfield = util.BytesToBools(bitfield)
+        numPieces := len(metadata.PieceHashes)
+		peerMessage.Bitfield = util.BytesToBools(bitfield)[:numPieces]
 	case Request:
 		// util.Printf("Request message\n")
 		var index int32

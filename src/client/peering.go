@@ -400,12 +400,12 @@ func (cl *BTClient) messageHandler(conn *net.TCPConn) {
 	for ok {
 		// Process the message
 		buf, err := btnet.ReadMessage(conn)
-		if err != nil {
-			util.EPrintf("%s\n", err)
-			return
-		}
-		peerMessage := btnet.DecodePeerMessage(buf)
-		util.TPrintf("Received PeerMessage, type: %v\n%v\n", peerMessage.Type, peerMessage)
+        if err != nil {
+            util.EPrintf("%s\n",err)
+            return
+        }
+		peerMessage := btnet.DecodePeerMessage(buf, cl.torrent)
+        util.TPrintf("Received PeerMessage, type: %v\n%v\n", peerMessage.Type, peerMessage)
 		// Massive switch case that would handle incoming messages depending on message type
 
 		// peerMessage := btnet.PeerMessage{}  // empty for now, TODO
