@@ -4,11 +4,11 @@ import (
 	"btnet"
 	"fs"
 	// "net"
+	"math/rand"
 	"strconv"
 	"sync"
-	"util"
-	"math/rand"
 	"time"
+	"util"
 )
 
 type status string
@@ -89,11 +89,11 @@ func StartBTClient(ip string, port int, metadataPath string, seedPath string, pe
 }
 
 func (cl *BTClient) Seed(file string) {
-    // util.Printf("Grabbing Seed lock\n")
+	// util.Printf("Grabbing Seed lock\n")
 	cl.mu.Lock()
-    // util.Printf("Got seed lock\n")
+	// util.Printf("Got seed lock\n")
 	cl.Pieces = fs.SplitIntoPieces(file, int(cl.torrent.PieceLen))
-	for i := range cl.PieceBitmap{
+	for i := range cl.PieceBitmap {
 		cl.PieceBitmap[i] = true
 	}
 	cl.persistPieces()
@@ -127,9 +127,9 @@ func (cl *BTClient) downloadPiece(piece int) {
 	if _, ok := cl.blockBitmap[piece]; !ok {
 		cl.blockBitmap[piece] = make([]bool, cl.numBlocks(piece), cl.numBlocks(piece))
 	}
-	for i:=0; i<cl.numBlocks(piece); i++ {
+	for i := 0; i < cl.numBlocks(piece); i++ {
 		// go cl.requestBlock(piece, i)
-        cl.requestBlock(piece, i)
+		cl.requestBlock(piece, i)
 	}
 }
 
@@ -138,10 +138,10 @@ func (cl *BTClient) downloadPieces() {
 		if cl.CheckShutdown() {
 			return
 		}
-		piece := <- cl.neededPieces
-        // util.Printf("Grabbing downloadPieces lock\n")
+		piece := <-cl.neededPieces
+		// util.Printf("Grabbing downloadPieces lock\n")
 		cl.mu.Lock()
-        // util.Printf("Got downloadPieces lock\n")
+		// util.Printf("Got downloadPieces lock\n")
 		if !cl.PieceBitmap[piece] {
 			cl.downloadPiece(piece)
 		}
@@ -149,9 +149,9 @@ func (cl *BTClient) downloadPieces() {
 
 		util.Wait(200)
 
-        // util.Printf("Grabbing downloadPieces lock v2\n")
+		// util.Printf("Grabbing downloadPieces lock v2\n")
 		cl.mu.Lock()
-        // util.Printf("Got downloadPieces lock v2\n")
+		// util.Printf("Got downloadPieces lock v2\n")
 		if !cl.PieceBitmap[piece] {
 			// piece still not downloaded, add it back to queue
 			go func() {
@@ -159,7 +159,7 @@ func (cl *BTClient) downloadPieces() {
 			}()
 		}
 		cl.mu.Unlock()
-        util.Wait(200)
+		util.Wait(200)
 	}
 }
 

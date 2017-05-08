@@ -45,25 +45,23 @@ func TestTCP(t *testing.T) {
 	util.EndTest()
 }
 
-
 func TestSendPeerMessage(t *testing.T) {
-  util.StartTest("Test SendPeerMessage...")
-  sendPeerMessageHandler := func(conn net.Conn) {
-    tcpConn := conn.(*net.TCPConn)
-    b := ReadMessage(tcpConn)
-    util.Printf("Message: %v\n", b)
-  }
+	util.StartTest("Test SendPeerMessage...")
+	sendPeerMessageHandler := func(conn net.Conn) {
+		tcpConn := conn.(*net.TCPConn)
+		b := ReadMessage(tcpConn)
+		util.Printf("Message: %v\n", b)
+	}
 
-  servAddr := "localhost:6667"
-  StartTCPServer(servAddr, sendPeerMessageHandler)
-  // msg := PeerMessage{KeepAlive: true}
-  // addr, _ := net.ResolveTCPAddr("tcp", servAddr)
-  // addr := tcpAddr.(*net.Addr)
-  // SendPeerMessage(addr, msg)
-  util.Wait(500)
-  // msg = PeerMessage{}
-  util.EndTest()
+	servAddr := "localhost:6667"
+	StartTCPServer(servAddr, sendPeerMessageHandler)
+	// msg := PeerMessage{KeepAlive: true}
+	// addr, _ := net.ResolveTCPAddr("tcp", servAddr)
+	// addr := tcpAddr.(*net.Addr)
+	// SendPeerMessage(addr, msg)
+	util.Wait(500)
+	// msg = PeerMessage{}
+	util.EndTest()
 }
-
 
 // TODO: theres a lot more logic in DoDial now... we should really test it

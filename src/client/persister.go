@@ -7,9 +7,9 @@ import "sync"
 import "io/ioutil"
 
 type Persister struct {
-	mu        sync.Mutex
+	mu    sync.Mutex
 	state []byte
-	Path string
+	Path  string
 }
 
 func MakePersister(path string) *Persister {

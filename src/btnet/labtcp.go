@@ -4,8 +4,8 @@ import (
 	"bufio"
 	"bytes"
 	"encoding/binary"
-	"net"
 	"io"
+	"net"
 	"time"
 	//"time"
 	"util"
@@ -13,10 +13,10 @@ import (
 
 func StartTCPServer(addr string, handler func(*net.TCPConn)) {
 	util.TPrintf("Starting the TCP Server...\n")
-    tcpAddr, err := net.ResolveTCPAddr("tcp", addr)
-    if err != nil {
-        util.EPrintf("Labtcp StartTCPServer: %s", err)
-    }
+	tcpAddr, err := net.ResolveTCPAddr("tcp", addr)
+	if err != nil {
+		util.EPrintf("Labtcp StartTCPServer: %s", err)
+	}
 	ln, err := net.ListenTCP("tcp", tcpAddr)
 	if err != nil {
 		// complain about things dying
@@ -35,7 +35,7 @@ func StartTCPServer(addr string, handler func(*net.TCPConn)) {
 }
 
 func DoDial(addr *net.TCPAddr, data []byte) *net.TCPConn {
-    util.Printf("Dialing: %v\n", addr.String())
+	util.Printf("Dialing: %v\n", addr.String())
 	conn, err := net.DialTCP("tcp", nil, addr)
 	if err != nil {
 		// Cry
@@ -51,7 +51,7 @@ func DoDial(addr *net.TCPAddr, data []byte) *net.TCPConn {
 }
 
 func ReadHandshake(conn *net.TCPConn) []byte {
-  // General strategy for reading handshakes
+	// General strategy for reading handshakes
 	// 1) The first byte for the length of the pstr
 	// 2) Read that many bytes after to form a packet + 49
 	// 3) Hope that nothing goes out of sync
@@ -79,7 +79,7 @@ func ReadHandshake(conn *net.TCPConn) []byte {
 
 	// Read pstr
 	pstrbuf := make([]byte, int(length))
-	for i:= 0; i < int(length); i++ {
+	for i := 0; i < int(length); i++ {
 		response, err := reader.ReadByte()
 		if err != nil {
 			util.EPrintf("labtcp ReadHandshake: %s\n", err.Error())
@@ -93,7 +93,7 @@ func ReadHandshake(conn *net.TCPConn) []byte {
 
 	// Read zeros
 	zerobuf := make([]byte, 8)
-	for i:= 0; i < 8; i++ {
+	for i := 0; i < 8; i++ {
 		response, err := reader.ReadByte()
 		if err != nil {
 			util.EPrintf("labtcp ReadHandshake: %s\n", err.Error())
@@ -101,7 +101,7 @@ func ReadHandshake(conn *net.TCPConn) []byte {
 			return responseData
 			// break
 		}
-		if (response != 0) {
+		if response != 0 {
 			util.EPrintf("labtcp ReadHandshake: badly formatted handshake\n")
 			responseData := append(msgLength, zerobuf...)
 			return responseData
@@ -117,13 +117,12 @@ func ReadHandshake(conn *net.TCPConn) []byte {
 		if err != nil {
 			util.EPrintf("labtcp ReadHandshake: %s\n", err.Error())
 			responseData := append(msgLength, zerobuf...)
-			responseData = append(responseData,  msgbuf...)
+			responseData = append(responseData, msgbuf...)
 			return responseData
 			// break
 		}
 		msgbuf[i] = response
 	}
-
 
 	responseData := append(msgLength, pstrbuf...)
 	responseData = append(responseData, zerobuf...)
@@ -146,8 +145,8 @@ func ReadMessage(conn *net.TCPConn) ([]byte, error) {
 		response, err := reader.ReadByte()
 		if err != nil {
 			// util.EPrintf("labtcp ReadMessage: %s\n", err)
-            // break
-            return []byte{}, err
+			// break
+			return []byte{}, err
 		}
 		msgLength[i] = response
 	}
@@ -158,7 +157,7 @@ func ReadMessage(conn *net.TCPConn) ([]byte, error) {
 	errBinary := binary.Read(msgLengthDecodeBuf, binary.BigEndian, &length)
 	if errBinary != nil {
 		// util.EPrintf("labtcp ReadMessage: %s\n", errBinary)
-        return []byte{}, errBinary
+		return []byte{}, errBinary
 	}
 
 	// Cross fingers
@@ -169,7 +168,7 @@ func ReadMessage(conn *net.TCPConn) ([]byte, error) {
 		if err != nil {
 			// util.EPrintf("labtcp ReadMessage: %s\n", err.Error())
 			// break
-            return []byte{}, err
+			return []byte{}, err
 		}
 		msgbuf[i] = response
 	}
@@ -189,14 +188,14 @@ func IsConnectionClosed(conn *net.TCPConn) bool {
 	one := []byte{}
 	conn.SetReadDeadline(time.Now())
 	if data, err := conn.Read(one); err == io.EOF {
-	  // l.Printf(logger.LevelDebug, "%s detected closed LAN connection", id)
-	  conn.Close()
-	  // conn = nil
+		// l.Printf(logger.LevelDebug, "%s detected closed LAN connection", id)
+		conn.Close()
+		// conn = nil
 		return true
 	} else {
-	  // var zero time.Time
+		// var zero time.Time
 		util.Printf("This is the data: %v, %v\n", data, err)
-	  conn.SetReadDeadline(time.Now().Add(10 * time.Millisecond))
+		conn.SetReadDeadline(time.Now().Add(10 * time.Millisecond))
 		return false
 	}
 }

@@ -10,10 +10,10 @@ import (
 const BT_PROTOCOL string = "BitTorrent protocol"
 
 type Handshake struct {
-  Pstr string
-  Reserved [8]byte
-  InfoHash []byte
-  PeerId []byte
+	Pstr     string
+	Reserved [8]byte
+	InfoHash []byte
+	PeerId   []byte
 }
 
 type MessageType int8
@@ -51,11 +51,11 @@ type PeerStatus struct {
 }
 
 type Peer struct {
-	Status   PeerStatus
-	Bitfield []bool
-	Addr     net.TCPAddr
-  Conn     net.TCPConn
-	MsgQueue chan PeerMessage
+	Status    PeerStatus
+	Bitfield  []bool
+	Addr      net.TCPAddr
+	Conn      net.TCPConn
+	MsgQueue  chan PeerMessage
 	KeepAlive chan bool
 }
 
@@ -74,98 +74,98 @@ func InitializePeer(addr *net.TCPAddr, infoHash string, peerId string, bitfieldL
 	peer.Status.AmInterested = false
 	peer.Status.PeerChoking = true
 	peer.Status.PeerInterested = false
-    peer.MsgQueue = make(chan PeerMessage, 100)
+	peer.MsgQueue = make(chan PeerMessage, 100)
 	peer.KeepAlive = make(chan bool, 100)
-  // Create handshake
-  // Handshake{Pstr: BT_PROTOCOL, InfoHash: []byte(infoHash), PeerId: []byte(peerId)}
-  if (conn != nil && conn.RemoteAddr() != nil) {
-    // This happens if we are not the ones initializing the communication
-    data := ReadHandshake(conn)
-    handshake := DecodeHandshake(data)
-    // TODO: Process the handshake and drop connection if needed
-    if (len(handshake.InfoHash) != 20) {
-        util.EPrintf("CR: BAD handshake, killing the peer\n")
-        // Badly formatted hsandshake, dont make the connection stick
-        conn.Close()
-        return nil
-    }
-    // TODO: Send bitfield message
-    message := PeerMessage{
-        Type:     Bitfield,
-        Bitfield: pieceBitmap}
-    // util.TPrintf("sending message - %v\n", message)
-    // util.TPrintf("Enqueuing bitfield message\n")
-    peer.MsgQueue <- message
-    // util.TPrintf("Finished enqueuing the mesage\n")
-    // cl.SendPeerMessage(&peer.Addr, message)
-    peer.Conn = *conn
-  } else {
-    handshake := Handshake{Pstr: BT_PROTOCOL, InfoHash: []byte(infoHash), PeerId: []byte(peerId)}
-    data := EncodeHandshake(handshake)
+	// Create handshake
+	// Handshake{Pstr: BT_PROTOCOL, InfoHash: []byte(infoHash), PeerId: []byte(peerId)}
+	if conn != nil && conn.RemoteAddr() != nil {
+		// This happens if we are not the ones initializing the communication
+		data := ReadHandshake(conn)
+		handshake := DecodeHandshake(data)
+		// TODO: Process the handshake and drop connection if needed
+		if len(handshake.InfoHash) != 20 {
+			util.EPrintf("CR: BAD handshake, killing the peer\n")
+			// Badly formatted hsandshake, dont make the connection stick
+			conn.Close()
+			return nil
+		}
+		// TODO: Send bitfield message
+		message := PeerMessage{
+			Type:     Bitfield,
+			Bitfield: pieceBitmap}
+		// util.TPrintf("sending message - %v\n", message)
+		// util.TPrintf("Enqueuing bitfield message\n")
+		peer.MsgQueue <- message
+		// util.TPrintf("Finished enqueuing the mesage\n")
+		// cl.SendPeerMessage(&peer.Addr, message)
+		peer.Conn = *conn
+	} else {
+		handshake := Handshake{Pstr: BT_PROTOCOL, InfoHash: []byte(infoHash), PeerId: []byte(peerId)}
+		data := EncodeHandshake(handshake)
 		// Sending data
-	peer.Conn = *DoDial(addr, data)
-    // Read bitfield message that gets sent back
-  }
+		peer.Conn = *DoDial(addr, data)
+		// Read bitfield message that gets sent back
+	}
 
 	return &peer
 }
 
 func DecodeHandshake(data []byte) Handshake {
-    if (len(data) < 1) {
-        util.EPrintf("Badly formatted data")
-        return Handshake{}
-    }
+	if len(data) < 1 {
+		util.EPrintf("Badly formatted data")
+		return Handshake{}
+	}
 
-  pstrbuf := make([]byte, 1)
-  pstrbuf[0] = data[0]
-  var pstrLen uint8
-  pstrLenDecodeBuf := bytes.NewReader(pstrbuf)
-  errBinary := binary.Read(pstrLenDecodeBuf, binary.BigEndian, &pstrLen)
-  if errBinary != nil {
-    util.EPrintf("labtcp DecodeHandshake: %s\n", errBinary)
-  }
-  // util.TPrintf("pstrLen: %d\n", pstrLen)
+	pstrbuf := make([]byte, 1)
+	pstrbuf[0] = data[0]
+	var pstrLen uint8
+	pstrLenDecodeBuf := bytes.NewReader(pstrbuf)
+	errBinary := binary.Read(pstrLenDecodeBuf, binary.BigEndian, &pstrLen)
+	if errBinary != nil {
+		util.EPrintf("labtcp DecodeHandshake: %s\n", errBinary)
+	}
+	// util.TPrintf("pstrLen: %d\n", pstrLen)
 
-	if (len(data) < (49 + int(pstrLen))) {
+	if len(data) < (49 + int(pstrLen)) {
 		util.EPrintf("Badly formatted data\n")
 		return Handshake{}
 	}
 
-  // Decode pstr
-  pstr := string(data[1:int(pstrLen) + 1])
-  // util.TPrintf("pstr: %s\n", pstr)
+	// Decode pstr
+	pstr := string(data[1 : int(pstrLen)+1])
+	// util.TPrintf("pstr: %s\n", pstr)
 
-  // Decode infoHash
-  infoHashIndex := pstrLen + 9
-  infoHash := []byte(data[infoHashIndex: infoHashIndex + 20])
+	// Decode infoHash
+	infoHashIndex := pstrLen + 9
+	infoHash := []byte(data[infoHashIndex : infoHashIndex+20])
 
-  // Decode peerId
-  peerIdIndex := infoHashIndex + 20
-  peerId := []byte(data[peerIdIndex: peerIdIndex + 20])
+	// Decode peerId
+	peerIdIndex := infoHashIndex + 20
+	peerId := []byte(data[peerIdIndex : peerIdIndex+20])
 
-  return Handshake{Pstr: pstr, InfoHash: infoHash, PeerId: peerId}
+	return Handshake{Pstr: pstr, InfoHash: infoHash, PeerId: peerId}
 }
 
 func EncodeHandshake(handshake Handshake) []byte {
-  pstrlen := uint8(len(handshake.Pstr))
-  buf := make([]byte, 49 + int(pstrlen))
-  buf[0] = byte(pstrlen)
+	pstrlen := uint8(len(handshake.Pstr))
+	buf := make([]byte, 49+int(pstrlen))
+	buf[0] = byte(pstrlen)
 
-  pstr := []byte(handshake.Pstr)
-  for i := 1; i < int(pstrlen) + 1; i++ {
-    buf[i] = pstr[i - 1]
-  }
-  // skip 8 bytes
-  infoHashIndex := 9 + int(pstrlen)
-  // infoHash = []byte(handshake.InfoHash)
-  for i:= infoHashIndex; i < infoHashIndex + 20; i++ {
-      buf[i] = handshake.InfoHash[i - infoHashIndex]
-  }
-  peerIdIndex := infoHashIndex + 20
-  for i := peerIdIndex; i < peerIdIndex + 20; i++ {
-    buf[i] = handshake.PeerId[i - peerIdIndex]
-  }
-  return buf
+	pstr := []byte(handshake.Pstr)
+	for i := 1; i < int(pstrlen)+1; i++ {
+		buf[i] = pstr[i-1]
+	}
+	// skip 8 bytes
+	infoHashIndex := 9 + int(pstrlen)
+	// infoHash = []byte(handshake.InfoHash)
+	for i := infoHashIndex; i < infoHashIndex+20; i++ {
+		buf[i] = handshake.InfoHash[i-infoHashIndex]
+	}
+	peerIdIndex := infoHashIndex + 20
+	for i := peerIdIndex; i < peerIdIndex+20; i++ {
+		buf[i] = handshake.PeerId[i-peerIdIndex]
+	}
+	return buf
 }
 
 // fill in a PeerMessage struct from an array of bytes
@@ -226,7 +226,7 @@ func DecodePeerMessage(data []byte) PeerMessage {
 		peerMessage.Index = index
 		return peerMessage
 	case Bitfield:
-        util.TPrintf("Decoding bitfield message")
+		util.TPrintf("Decoding bitfield message")
 		bitfield := make([]byte, (msglength - 1))
 		err = binary.Read(buf, binary.BigEndian, &bitfield)
 		checkAndPrintErr(err)
@@ -248,7 +248,7 @@ func DecodePeerMessage(data []byte) PeerMessage {
 	case Piece:
 		var index int32
 		var begin int32
-		block := make([]byte, msglength - 9)
+		block := make([]byte, msglength-9)
 		err = binary.Read(buf, binary.BigEndian, &index)
 		checkAndPrintErr(err)
 		err = binary.Read(buf, binary.BigEndian, &begin)
@@ -332,7 +332,7 @@ func EncodePeerMessage(msg PeerMessage) []byte {
 	case Bitfield:
 		// util.Printf("Encoding BitField message")
 		bitFieldBuf := util.BoolsToBytes(msg.Bitfield)
-		err = binary.Write(buf, binary.BigEndian, int32(len(bitFieldBuf) + 1))
+		err = binary.Write(buf, binary.BigEndian, int32(len(bitFieldBuf)+1))
 		checkAndPrintErr(err)
 		err = binary.Write(buf, binary.BigEndian, msg.Type)
 		checkAndPrintErr(err)
@@ -351,7 +351,7 @@ func EncodePeerMessage(msg PeerMessage) []byte {
 		err = binary.Write(buf, binary.BigEndian, int32(msg.Length))
 	case Piece:
 		// util.Printf("Encoding Piece message")
-		err = binary.Write(buf, binary.BigEndian, int32(9 + len(msg.Block)))
+		err = binary.Write(buf, binary.BigEndian, int32(9+len(msg.Block)))
 		checkAndPrintErr(err)
 		err = binary.Write(buf, binary.BigEndian, msg.Type)
 		checkAndPrintErr(err)
