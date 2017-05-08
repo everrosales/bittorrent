@@ -103,7 +103,11 @@ func (cl *BTClient) trackerHeartbeat() {
 			if err != nil {
 				panic(err)
 			}
-			cl.SendPeerMessage(addr, btnet.PeerMessage{KeepAlive: true})
+			myAddr, err := net.ResolveTCPAddr("tcp", cl.ip + ":" + cl.port)
+			if addr.String() != myAddr.String() {
+				util.TPrintf("sending initial message to %v", addr)
+				cl.SendPeerMessage(addr, btnet.PeerMessage{KeepAlive: true})
+			}
 		}
         // util.Printf("Grabbing trackerHeartbeat lock\n")
 		cl.mu.Lock()
@@ -256,6 +260,7 @@ func (cl *BTClient) sendHaveMessage(peer *btnet.Peer, index int, begin int, leng
 func (cl *BTClient) SetupPeerConnections(addr *net.TCPAddr, conn *net.TCPConn) {
     // Try dialing
     // connection := DoDial(addr, data)
+
     infoHash := fs.GetInfoHash(fs.ReadTorrent(cl.torrentPath))
     peerId := cl.peerId
     bitfieldLength := cl.numPieces
