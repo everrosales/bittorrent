@@ -12,11 +12,12 @@ func (cl *BTClient) Seed(file string) {
 	pieces := fs.SplitIntoPieces(file, pieceLen)
 
 	cl.lock("seeding/seed 2")
-	cl.Pieces = pieces
+	copy(cl.Pieces, pieces)
 	for i := range cl.PieceBitmap {
 		cl.PieceBitmap[i] = true
 	}
-	pieceBitmap := cl.PieceBitmap
+	pieceBitmap := make([]bool, len(cl.PieceBitmap))
+	copy(pieceBitmap, cl.PieceBitmap)
 	cl.unlock("seeding/seed 2")
 
 	cl.persister.persistPieces(pieces, pieceBitmap)

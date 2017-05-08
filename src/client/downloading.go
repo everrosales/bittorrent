@@ -32,7 +32,7 @@ func (cl *BTClient) downloadPieces() {
 
 		cl.lock("downloading/downloadPieces 2")
 		if !cl.PieceBitmap[piece] {
-			util.TPrintf("piece was not downloaded")
+			util.TPrintf("piece was not downloaded\n")
 			// piece still not downloaded, add it back to queue
 			go func() {
 				cl.neededPieces <- piece

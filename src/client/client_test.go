@@ -9,7 +9,7 @@ import (
 )
 
 func init() {
-	util.Debug = util.Lock
+	util.Debug = util.None
 }
 
 // Helpers
@@ -54,7 +54,7 @@ func TestClientTCPServerNice(t *testing.T) {
 	// util.TPrintf("Encoded data: %v\n", data)
 	connection := btnet.DoDial(tcpAddr, data)
 	util.Wait(100)
-	_, ok := cl.peers[connection.LocalAddr().String()]
+	_, ok := cl.getPeer(connection.LocalAddr().String())
 	if !ok {
 		util.EPrintf("A peer should be connected\n")
 		t.Fail()
@@ -76,7 +76,7 @@ func TestClientTCPServerNice(t *testing.T) {
 	// util.Printf("Making a connection\n")
 	connection.Write(data)
 	util.Wait(100)
-	_, ok = cl.peers[connection.LocalAddr().String()]
+	_, ok = cl.getPeer(connection.LocalAddr().String())
 	if !ok {
 		util.EPrintf("Client should be connected\n")
 		t.Fail()
@@ -88,7 +88,7 @@ func TestClientTCPServerNice(t *testing.T) {
 
 	util.Wait(6000)
 	util.Printf("cl.peers: %v\n", cl.peers)
-	if len(cl.peers) > 0 {
+	if cl.getNumPeers() > 0 {
 		util.EPrintf("There should be no peers connected\n")
 		cl.Kill()
 		t.Fail()
@@ -121,7 +121,7 @@ func TestClientTCPServer(t *testing.T) {
 	connection := btnet.DoDial(tcpAddr, baddata)
 	connection.SetDeadline(time.Now().Add(500 * time.Millisecond))
 	util.Wait(1000)
-	if len(cl.peers) > 0 {
+	if cl.getNumPeers() > 0 {
 		util.EPrintf("There should be no peers connected\n")
 		t.Fail()
 	}
@@ -140,7 +140,7 @@ func TestClientTCPServer(t *testing.T) {
 	// util.TPrintf("Encoded data: %v\n", data)
 	connection = btnet.DoDial(tcpAddr, data)
 	util.Wait(100)
-	_, ok := cl.peers[connection.LocalAddr().String()]
+	_, ok := cl.getPeer(connection.LocalAddr().String())
 	if !ok {
 		util.EPrintf("A peer should be connected\n")
 		t.Fail()
@@ -151,7 +151,7 @@ func TestClientTCPServer(t *testing.T) {
 	data = btnet.EncodePeerMessage(msg)
 	// util.Printf("Making a connection\n")
 	util.Wait(100)
-	_, ok = cl.peers[connection.LocalAddr().String()]
+	_, ok = cl.getPeer(connection.LocalAddr().String())
 	if !ok {
 		util.EPrintf("Client should be connected\n")
 		t.Fail()
@@ -159,7 +159,7 @@ func TestClientTCPServer(t *testing.T) {
 	}
 
 	util.Wait(4000)
-	if len(cl.peers) > 0 {
+	if cl.getNumPeers() > 0 {
 		util.EPrintf("There should be no peers connected\n")
 		cl.Kill()
 		t.Fail()
@@ -183,7 +183,7 @@ func TestTwoPeers(t *testing.T) {
 	first.SendPeerMessage(tcpAddr, btnet.PeerMessage{KeepAlive: true})
 	util.Wait(10000)
 	// TODO: Make sure they do something interest
-	if len(second.peers) < 1 {
+	if second.getNumPeers() < 1 {
 		t.Fatalf("second peer list does not include the first")
 		t.Fail()
 	}
