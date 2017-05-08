@@ -4,13 +4,8 @@ import (
 	"btnet"
 	"bytes"
 	"encoding/gob"
-	"errors"
 	"fs"
-	"io/ioutil"
 	"net"
-	"net/http"
-	"net/url"
-	"strconv"
 	"time"
 	"util"
 )
@@ -22,109 +17,12 @@ func (cl *BTClient) startServer() {
 	btnet.StartTCPServer(cl.ip+":"+cl.port, cl.messageHandler)
 }
 
-type trackerReq struct {
-	peerId     string
-	ip         string
-	port       string
-	uploaded   int
-	downloaded int
-	left       int
-	infoHash   string
-	status     status
-}
-
-type TrackerRes struct {
-	Interval int                 `bencode:"interval"`
-	Peers    []map[string]string `bencode:"peers"`
-	Failure  string              `bencode:"failure reason"`
-}
-
-func sendRequest(addr string, req *trackerReq) ([]byte, error) {
-	url := addr + "/?peer_id=" + url.QueryEscape(req.peerId) +
-		"&port=" + req.port + "&ip=" + req.ip + "&uploaded=" +
-		strconv.Itoa(req.uploaded) + "&downloaded=" + strconv.Itoa(req.downloaded) +
-		"&left=" + strconv.Itoa(req.left) + "&info_hash=" +
-		url.QueryEscape(req.infoHash) + "&status=" + string(req.status)
-	resp, err := http.Get(url)
-	if err != nil {
-		return nil, errors.New("Error sending request")
-	}
-	if resp.Status != "200 OK" {
-		return nil, errors.New("Wrong response status code")
-	}
-	bodyBytes, err2 := ioutil.ReadAll(resp.Body)
-	if err2 != nil {
-		return nil, errors.New("Failure reading response body")
-	}
-	return bodyBytes, nil
-}
-
-func (cl *BTClient) contactTracker(baseUrl string) TrackerRes {
-	// TODO: update uploaded, downloaded, and left
-	// util.Printf("Grabbing contactTracker lock\n")
-	cl.mu.Lock()
-	// util.Printf("Got contactTracker lock\n")
-	request := trackerReq{cl.peerId, cl.ip, cl.port, 0, 0, 0, cl.infoHash, cl.status}
-	cl.mu.Unlock()
-	byteRes, err := sendRequest(baseUrl, &request)
-	if err != nil {
-		util.EPrintf("Received error sending to tracker: %s\n", err)
-	}
-	res := TrackerRes{}
-	fs.Decode(string(byteRes), &res)
-	if res.Failure != "" {
-		util.EPrintf("Received error from tracker: %s\n", res.Failure)
-	}
-	util.IPrintf("Contacting tracker at %s (%d peers)\n", baseUrl, len(res.Peers))
-	// util.Printf("Grabbing contactTracker lock v2\n")
-	cl.mu.Lock()
-	// util.Printf("Got contactTracker lock v2\n")
-	cl.heartbeatInterval = res.Interval
-	cl.mu.Unlock()
-
-	for _, p := range res.Peers {
-		if p["port"] == "0" {
-			util.EPrintf("byteRes %v, res %v", byteRes, res)
-			panic("got port 0 from tracker")
-		}
-	}
-
-	return res
-}
-
 // func (cl *BTClient) listenForPeers() {
 //   // Set up stuff
 //   cl.startServer()
 //
 //   //TODO: Send initial hello packets
 // }
-
-func (cl *BTClient) trackerHeartbeat() {
-	for {
-		if cl.CheckShutdown() {
-			return
-		}
-		res := cl.contactTracker(cl.torrent.TrackerUrl)
-		for _, p := range res.Peers {
-			util.TPrintf("peerId %s, ip %s, port %s\n", p["peer id"], p["ip"], p["port"])
-			addr, err := net.ResolveTCPAddr("tcp", p["ip"]+":"+p["port"])
-			if err != nil {
-				panic(err)
-			}
-			myAddr, err := net.ResolveTCPAddr("tcp", cl.ip+":"+cl.port)
-			if addr.String() != myAddr.String() {
-				util.TPrintf("sending initial message to %v", addr)
-				cl.SendPeerMessage(addr, btnet.PeerMessage{KeepAlive: true})
-			}
-		}
-		// util.Printf("Grabbing trackerHeartbeat lock\n")
-		cl.mu.Lock()
-		// util.Printf("Got trackerHeartbeat lock\n")
-		wait := cl.heartbeatInterval * 1000
-		cl.mu.Unlock()
-		util.Wait(wait)
-	}
-}
 
 func (cl *BTClient) connectToPeer(addr string) {
 	conn, err := net.DialTimeout("tcp", addr, DialTimeout)
@@ -139,19 +37,14 @@ func (cl *BTClient) connectToPeer(addr string) {
 }
 
 func (cl *BTClient) requestBlock(piece int, block int) {
-	// util.Printf("Grabbing requestBlock lock\n")
-	// cl.mu.Lock()
-	// util.Printf("Got requestBlock lock\n")
 	for addr, peer := range cl.peers {
-		util.TPrintf("peer bitfield: %v\n", peer.Bitfield)
+		// util.TPrintf("peer bitfield: %v\n", peer.Bitfield)
 		if peer.Bitfield[piece] && !peer.Status.PeerChoking {
 			util.Printf("requesting piece %d block %d from peer %s\n", piece, block, addr)
 			begin := block * fs.BlockSize
 			cl.sendRequestMessage(peer, piece, begin, fs.BlockSize)
 		}
 	}
-
-	// cl.mu.Unlock()
 }
 
 func (cl *BTClient) sendBlock(index int, begin int, length int, peer *btnet.Peer) {
@@ -191,27 +84,18 @@ func (cl *BTClient) saveBlock(index int, begin int, length int, block []byte) {
 
 	if allTrue(cl.blockBitmap[index]) {
 		// hash and save piece
-		if cl.Pieces[index].Hash() != cl.torrent.PieceHashes[index] {
+		if cl.Pieces[index].Hash() != cl.torrentMeta.PieceHashes[index] {
 			delete(cl.blockBitmap, index)
 			return
 		}
 		cl.PieceBitmap[index] = true
-		cl.persistPieces()
+		cl.persister.persistPieces(cl.Pieces, cl.PieceBitmap)
 	}
 
 	for _, peer := range cl.peers {
 		// send have message
 		cl.sendHaveMessage(peer, index, begin, length)
 	}
-}
-
-func (cl *BTClient) persistPieces() {
-	w := new(bytes.Buffer)
-	e := gob.NewEncoder(w)
-	e.Encode(cl.Pieces)
-	e.Encode(cl.PieceBitmap)
-	data := w.Bytes()
-	cl.persister.SaveState(data)
 }
 
 func (cl *BTClient) loadPieces(data []byte) {
@@ -222,16 +106,6 @@ func (cl *BTClient) loadPieces(data []byte) {
 	d := gob.NewDecoder(r)
 	d.Decode(&cl.Pieces)
 	d.Decode(&cl.PieceBitmap)
-}
-
-// Helper
-func allTrue(arr []bool) bool {
-	for _, entry := range arr {
-		if !entry {
-			return false
-		}
-	}
-	return true
 }
 
 func (cl *BTClient) sendRequestMessage(peer *btnet.Peer, index int, begin int, length int) {
@@ -266,116 +140,117 @@ func (cl *BTClient) sendHaveMessage(peer *btnet.Peer, index int, begin int, leng
 }
 
 func (cl *BTClient) SetupPeerConnections(addr *net.TCPAddr, conn *net.TCPConn) {
-    // Try dialing
-    // connection := DoDial(addr, data)
+	// Try dialing
+	// connection := DoDial(addr, data)
 
-    infoHash := fs.GetInfoHash(fs.ReadTorrent(cl.torrentPath))
-    peerId := cl.peerId
-    bitfieldLength := cl.numPieces
-    // util.Printf("Grabbing SetupPeerConnections lock\n")
-    // util.Printf("Got SetupPeerConnections lock\n")
-    peer := btnet.InitializePeer(addr, infoHash, peerId, bitfieldLength, conn, cl.PieceBitmap)
-    if (peer == nil) {
-        // We got a bad handshake so drop the connection
-        return
-    }
-    cl.mu.Lock()
-    cl.peers[addr.String()] = peer
-    cl.mu.Unlock()
+	infoHash := fs.GetInfoHash(fs.ReadTorrent(cl.torrentPath))
+	peerId := cl.peerId
+	bitfieldLength := cl.numPieces
+	cl.lock("peering/setupPeerConnections 1")
+	peer := btnet.InitializePeer(addr, infoHash, peerId, bitfieldLength, conn, cl.PieceBitmap)
+	if peer == nil {
+		// We got a bad handshake so drop the connection
+		cl.unlock("peering/setupPeerConnections 1")
+		return
+	}
+	cl.peers[addr.String()] = peer
+	cl.unlock("peering/setupPeerConnections 1")
 
-    // Start go routine that handles the closing of the tcp connection if we dont
-    // get a keepAlive signal
-    // Separate go routine for sending keepalive signals
-    go func() {
-        for {
-            // util.Printf("Grabbing msgQueue lock\n")
-            // util.Printf("Got msgQueue lock\n")
-            if peer == nil || peer.Conn.RemoteAddr() == nil {
-                // util.Printf("Remote conncetion closed?\n")
-                cl.mu.Unlock()
-                return
-            }
-            var msg btnet.PeerMessage
-            select {
-            case msg = <- peer.MsgQueue:
-                // util.TPrintf("Received message from msgqueue - Type: %v\n", msg.Type)
-            case <-time.After(peerTimeout / 3):
-                msg = btnet.PeerMessage{KeepAlive: true}
-            }
-            data := btnet.EncodePeerMessage(msg)
-            // if (!msg.KeepAlive) {
+	// Start go routine that handles the closing of the tcp connection if we dont
+	// get a keepAlive signal
+	// Separate go routine for sending keepalive signals
+	go func() {
+		for {
+			// util.Printf("Grabbing msgQueue lock\n")
+			cl.lock("peering/setupPeerConnections msgQueue")
+			// util.Printf("Got msgQueue lock\n")
+			if peer == nil || peer.Conn.RemoteAddr() == nil {
+				// util.Printf("Remote conncetion closed?\n")
+				cl.unlock("peering/setupPeerConnections msgQueue")
+				return
+			}
+			var msg btnet.PeerMessage
+			select {
+			case msg = <-peer.MsgQueue:
+				// util.TPrintf("Received message from msgqueue - Type: %v\n", msg.Type)
+			case <-time.After(peerTimeout / 3):
+				msg = btnet.PeerMessage{KeepAlive: true}
+			}
+			data := btnet.EncodePeerMessage(msg)
+			// if (!msg.KeepAlive) {
 
-            util.TPrintf("Sending encoded message from: %v, to: %v, type: %v, data: %v\n",
-                         peer.Conn.LocalAddr().String(), peer.Conn.RemoteAddr().String(), msg.Type, data)
-            // }
-            // We dont need a lock if only this thread is sending out TCP messages
-            // if (peer.Conn == nil) {
-            //     util.EPrintf("FFS\n")
-            // }
+			util.TPrintf("Sending encoded message from: %v, to: %v, type: %v, data: %v\n",
+				peer.Conn.LocalAddr().String(), peer.Conn.RemoteAddr().String(), msg.Type, data)
+			// }
+			// We dont need a lock if only this thread is sending out TCP messages
+			// if (peer.Conn == nil) {
+			//     util.EPrintf("FFS\n")
+			// }
 
-            // util.Printf("peer.Conn.RemoteAddr(): %v\n", peer.Conn.RemoteAddr())
-            // peer.Conn.SetWriteDeadline(time.Now().Add(time.Millisecond * 500))
-            _, err := peer.Conn.Write(data)
-            if err != nil  {
-                // Connection is probably closed
-                // TODO: Not sure if this is the right way of checking this
-                util.EPrintf("err: %v\n", err)
-                if peer.Conn.RemoteAddr() != nil {
-                    // util.EPrintf("Closing the connection\n")
-                    peer.Conn.Close()
-                }
-                cl.mu.Unlock()
-                return
-            }
-            util.Printf("Sent message type: %v\n", msg.Type)
-        }
-    }()
+			// util.Printf("peer.Conn.RemoteAddr(): %v\n", peer.Conn.RemoteAddr())
+			// peer.Conn.SetWriteDeadline(time.Now().Add(time.Millisecond * 500))
+			_, err := peer.Conn.Write(data)
+			if err != nil {
+				// Connection is probably closed
+				// TODO: Not sure if this is the right way of checking this
+				util.EPrintf("err: %v\n", err)
+				if peer.Conn.RemoteAddr() != nil {
+					// util.EPrintf("Closing the connection\n")
+					peer.Conn.Close()
+				}
+				cl.unlock("peering/setupPeerConnections msgQueue")
+				return
+			}
+			util.Printf("Sent message type: %v\n", msg.Type)
+			cl.unlock("peering/setupPeerConnections msgQueue")
+		}
+	}()
 
-    // KeepAlive loop
-    go func() {
-        for {
-            select {
-            case <-peer.KeepAlive:
-                   // Do nothing, this is good
-            case <-time.After(peerTimeout):
-                if (peer.Conn.RemoteAddr() != nil) {
-                    peer.Conn.Close()
-                    util.EPrintf("Closing the connection again\n")
-                }
-                // util.Printf("Grabbing KeepAliveTimeout lock\n")
-                cl.mu.Lock()
-                // util.Printf("Got KeepAliveTimeout lock\n")
-                util.EPrintf("KeepAliveTIMEOUT EXCEEDED port: %v\n", cl.port)
-                delete(cl.peers, peer.Addr.String())
-                // cl.peers[addr] = nil
-                cl.mu.Unlock()
-                return
-            }
-        }
-    }()
+	// KeepAlive loop
+	go func() {
+		for {
+			select {
+			case <-peer.KeepAlive:
+				// Do nothing, this is good
+			case <-time.After(peerTimeout):
+				if peer.Conn.RemoteAddr() != nil {
+					peer.Conn.Close()
+					util.EPrintf("Closing the connection again\n")
+				}
+				// util.Printf("Grabbing KeepAliveTimeout lock\n")
+				cl.lock("peering/setupPeerConnections keepAlive")
+				// util.Printf("Got KeepAliveTimeout lock\n")
+				util.EPrintf("KeepAliveTIMEOUT EXCEEDED port: %v\n", cl.port)
+				delete(cl.peers, peer.Addr.String())
+				// cl.peers[addr] = nil
+				cl.unlock("peering/setupPeerConnections keepAlive")
+				return
+			}
+		}
+	}()
 
-    // Start another go routine to read stuff from that channel
-    go func() {
-        if (peer.Conn.RemoteAddr() == nil) {
-            util.Printf("Connection Closed!\n")
-        } else {
-            util.Printf("Connection Alive!\n")
-        }
-        cl.messageHandler(&peer.Conn)
-    }()
+	// Start another go routine to read stuff from that channel
+	go func() {
+		if peer.Conn.RemoteAddr() == nil {
+			util.Printf("Connection Closed!\n")
+		} else {
+			util.Printf("Connection Alive!\n")
+		}
+		cl.messageHandler(&peer.Conn)
+	}()
 }
 
 func (cl *BTClient) SendPeerMessage(addr *net.TCPAddr, message btnet.PeerMessage) {
-	cl.mu.Lock()
+	cl.lock("peering/sendPeerMessage")
 	peer, ok := cl.peers[addr.String()]
 	if !ok {
-		cl.mu.Unlock()
+		cl.unlock("peering/sendPeerMessage")
 		cl.SetupPeerConnections(addr, nil)
-		cl.mu.Lock()
+		cl.lock("peering/sendPeerMessage")
 		peer, _ = cl.peers[addr.String()]
 	}
-	cl.mu.Unlock()
 	peer.MsgQueue <- message
+	cl.unlock("peering/sendPeerMessage")
 }
 
 func (cl *BTClient) messageHandler(conn *net.TCPConn) {
@@ -404,12 +279,12 @@ func (cl *BTClient) messageHandler(conn *net.TCPConn) {
 	for ok {
 		// Process the message
 		buf, err := btnet.ReadMessage(conn)
-        if err != nil {
-            util.EPrintf("%s\n",err)
-            return
-        }
-		peerMessage := btnet.DecodePeerMessage(buf, cl.torrent)
-        util.TPrintf("Received PeerMessage, type: %v\n%v\n", peerMessage.Type, peerMessage)
+		if err != nil {
+			util.EPrintf("%s\n", err)
+			return
+		}
+		peerMessage := btnet.DecodePeerMessage(buf, cl.torrentMeta)
+		util.TPrintf("Received PeerMessage, type: %v\n%v\n", peerMessage.Type, peerMessage)
 		// Massive switch case that would handle incoming messages depending on message type
 
 		// peerMessage := btnet.PeerMessage{}  // empty for now, TODO

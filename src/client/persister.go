@@ -3,8 +3,13 @@ package btclient
 // Interface for client to save persistent state
 // Modified from 6.824 raft/persister.go
 
-import "sync"
-import "io/ioutil"
+import (
+	"bytes"
+	"encoding/gob"
+	"fs"
+	"io/ioutil"
+	"sync"
+)
 
 type Persister struct {
 	mu    sync.Mutex
@@ -47,4 +52,13 @@ func (ps *Persister) StateSize() int {
 	ps.mu.Lock()
 	defer ps.mu.Unlock()
 	return len(ps.state)
+}
+
+func (ps *Persister) persistPieces(pieces []fs.Piece, pieceBitmap []bool) {
+	w := new(bytes.Buffer)
+	e := gob.NewEncoder(w)
+	e.Encode(pieces)
+	e.Encode(pieceBitmap)
+	data := w.Bytes()
+	ps.SaveState(data)
 }

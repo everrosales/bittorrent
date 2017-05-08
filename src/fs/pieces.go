@@ -15,6 +15,7 @@ type Piece struct {
 	Blocks []Block
 }
 
+// get the SHA1 hash of a piece
 func (piece *Piece) Hash() string {
 	allBytes := []byte{}
 	for _, block := range piece.Blocks {
@@ -29,6 +30,7 @@ func (piece *Piece) Hash() string {
 	return base64.URLEncoding.EncodeToString(hash)
 }
 
+// split a file into pieces of size pieceLen
 func SplitIntoPieces(path string, pieceLen int) []Piece {
 	fileBytes, err := ioutil.ReadFile(path)
 	if err != nil {
@@ -42,6 +44,7 @@ func SplitIntoPieces(path string, pieceLen int) []Piece {
 	return pieces
 }
 
+// combine a slice of pieces into one file, written out at path
 func CombinePieces(path string, pieces []Piece) {
 	data := []byte{}
 	for _, piece := range pieces {
@@ -55,8 +58,8 @@ func CombinePieces(path string, pieces []Piece) {
 	}
 }
 
+// returns the number of blocks for a given piece
 func NumBlocksInPiece(piece int, pieceLen int, totalLen int) int {
-	// returns the number of blocks for a given piece
 	var actualLen int
 	numPieces := NumPieces(pieceLen, totalLen)
 	if piece == numPieces-1 && totalLen%BlockSize != 0 {
@@ -68,14 +71,17 @@ func NumBlocksInPiece(piece int, pieceLen int, totalLen int) int {
 	return int(math.Ceil(float64(actualLen / BlockSize)))
 }
 
+// get the number of pieces given total file size and anticipated piece size
 func NumPieces(pieceLen int, totalLen int) int {
 	return int(math.Ceil(float64(totalLen) / float64(pieceLen)))
 }
 
+// get the truncated array from start index of at most length length
 func getSubArray(start int, length int, arr []byte) []byte {
 	return arr[start:min(start+length, len(arr))]
 }
 
+// get a piece from arr with index num
 func getPiece(num int, pieceLen int, arr []byte) Piece {
 	pieceBytes := getSubArray(num*pieceLen, pieceLen, arr)
 	numBlocks := NumBlocksInPiece(num, pieceLen, len(arr))
@@ -86,6 +92,7 @@ func getPiece(num int, pieceLen int, arr []byte) Piece {
 	return Piece{blocks}
 }
 
+// get one block
 func getBlock(block int, piece []byte) Block {
 	start := block * BlockSize
 	return Block(getSubArray(start, BlockSize, piece))

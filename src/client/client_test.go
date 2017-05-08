@@ -9,7 +9,7 @@ import (
 )
 
 func init() {
-	util.Debug = util.Trace
+	util.Debug = util.Lock
 }
 
 // Helpers
@@ -63,7 +63,7 @@ func TestClientTCPServerNice(t *testing.T) {
 	util.Printf("Passed first bit\n")
 
 	returnedData, err := btnet.ReadMessage(connection)
-	decodedMsg := btnet.DecodePeerMessage(returnedData)
+	decodedMsg := btnet.DecodePeerMessage(returnedData, cl.torrentMeta)
 	// util.TPrintf("msg: %v", decodedMsg)
 	if err != nil || decodedMsg.Type != 5 {
 		util.EPrintf("Did not recieve bitfield message\n%v\n", decodedMsg)

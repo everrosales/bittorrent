@@ -15,9 +15,10 @@ type debugLevel int
 var Debug debugLevel
 
 const (
-	Trace debugLevel = 1
-	Info  debugLevel = 2
-	None  debugLevel = 3
+	Lock  debugLevel = 1
+	Trace debugLevel = 2
+	Info  debugLevel = 3
+	None  debugLevel = 4
 )
 
 const (
@@ -77,6 +78,14 @@ func TPrintf(format string, a ...interface{}) (n int, err error) {
 	return
 }
 
+//lock logging
+func LPrintf(format string, a ...interface{}) (n int, err error) {
+	if Debug <= Lock {
+		ColorPrintf(Default, format, a...)
+	}
+	return
+}
+
 // generic printing with color
 func ColorPrintf(c color, format string, a ...interface{}) (n int, err error) {
 	str := string(c) + format + string(Reset)
@@ -106,7 +115,7 @@ func ByteArrayEquals(first []byte, second []byte) bool {
 	return true
 }
 
-func BoolArrayEquals(first []bool, second[]bool) bool {
+func BoolArrayEquals(first []bool, second []bool) bool {
 	if first == nil && second == nil {
 		return true
 	}
@@ -153,32 +162,32 @@ func GenerateRandStr(length int) string {
 }
 
 func BoolsToBytes(data []bool) []byte {
-	if (len(data) % 8 != 0) {
+	if len(data)%8 != 0 {
 		// we need to pad the message with zeros
-		padBuf := make([]bool, 8 - (len(data) % 8))
+		padBuf := make([]bool, 8-(len(data)%8))
 		// the extra pad needs to be false (0-padded)
 		data = append(data, padBuf...)
 	}
 
-	if len(data) % 8 != 0 {
+	if len(data)%8 != 0 {
 		EPrintf("boolsToBytes: wtf")
 	}
 
 	output := make([]byte, len(data)/8)
 	for i := 0; i < len(data); i++ {
 		val := byte(0)
-		if (data[i]) {
+		if data[i] {
 			val = byte(0x80)
 		}
-		output[i/8] = output[i/8] | (val >> uint(i % 8))
+		output[i/8] = output[i/8] | (val >> uint(i%8))
 	}
 	return output
 }
 
 func BytesToBools(data []byte) []bool {
-	output := make([]bool, len(data) * 8)
-	for i := 0; i < len(data) * 8; i++ {
-		mask := (byte(0x80) >> uint(i % 8))
+	output := make([]bool, len(data)*8)
+	for i := 0; i < len(data)*8; i++ {
+		mask := (byte(0x80) >> uint(i%8))
 		if (data[i/8] & mask) > 0 {
 			output[i] = true
 		}

@@ -3,10 +3,10 @@ package main
 import (
 	"client"
 	"flag"
+	"io/ioutil"
+	"os"
 	"tracker"
 	"util"
-	"os"
-	"io/ioutil"
 )
 
 func main() {
@@ -15,7 +15,7 @@ func main() {
 	trackerFlag := flag.Bool("tracker", false, "Start tracker for torrent")
 	fileFlag := flag.String("file", "", "Torrent (.torrent) file (required)")
 	seedFlag := flag.String("seed", "", "The file for the client to seed (client only)")
-	debugFlag := flag.String("debug", "None", "Debug level [None|Info|Trace]")
+	debugFlag := flag.String("debug", "None", "Debug level [None|Info|Trace|Lock]")
 	portFlag := flag.Int("port", 8000, "Port (default 8000)")
 	flag.Parse()
 
@@ -26,6 +26,8 @@ func main() {
 		util.Debug = util.Info
 	} else if *debugFlag == "Trace" {
 		util.Debug = util.Trace
+	} else if *debugFlag == "Lock" {
+		util.Debug = util.Lock
 	} else {
 		util.EPrintf("Invalid debug level.\n")
 		return
