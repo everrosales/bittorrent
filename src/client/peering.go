@@ -323,7 +323,7 @@ func (cl *BTClient) SetupPeerConnections(addr *net.TCPAddr, conn *net.TCPConn) {
                     peer.Conn.Close()
                 }
                 cl.mu.Unlock()
-                break
+                return
             }
             util.Printf("Sent message\n")
             cl.mu.Unlock()
@@ -402,7 +402,11 @@ func (cl *BTClient) messageHandler(conn *net.TCPConn) {
 	for ok {
 		// Process the message
         util.TPrintf("Client-port: %v\n", cl.port)
-		buf := btnet.ReadMessage(conn)
+		buf, err := btnet.ReadMessage(conn)
+        if err != nil {
+            util.EPrintf("%s\n",err)
+            return
+        }
         util.TPrintf("Finished reading\n")
 
 		peerMessage := btnet.DecodePeerMessage(buf)
@@ -449,7 +453,8 @@ func (cl *BTClient) messageHandler(conn *net.TCPConn) {
 			// TODO?
 		}
 		// Update okay to make sure that we still have a connection
-		_, ok = cl.peers[conn.RemoteAddr().String()]
+		// _, ok = cl.peers[conn.RemoteAddr().String()]
+        ok = conn.RemoteAddr() != nil
 	}
     util.Printf("\nExiting messageHandler\n\n")
 }

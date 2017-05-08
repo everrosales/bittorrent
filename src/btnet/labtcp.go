@@ -134,7 +134,7 @@ func ReadHandshake(conn *net.TCPConn) []byte {
 	return responseData
 }
 
-func ReadMessage(conn *net.TCPConn) []byte {
+func ReadMessage(conn *net.TCPConn) ([]byte, error) {
 	// General strategy for reading packets back
 	// 1) The first four bytes for the length of the packets
 	// 2) Read that many bytes after to form a packet
@@ -149,7 +149,9 @@ func ReadMessage(conn *net.TCPConn) []byte {
 	for i := 0; i < 4; i++ {
 		response, err := reader.ReadByte()
 		if err != nil {
-			util.EPrintf("labtcp ReadMessage: %s\n", err)
+			// util.EPrintf("labtcp ReadMessage: %s\n", err)
+            // break
+            return []byte{}, err
 		}
 		msgLength[i] = response
 	}
@@ -160,7 +162,8 @@ func ReadMessage(conn *net.TCPConn) []byte {
 	msgLengthDecodeBuf := bytes.NewReader(msgLength)
 	errBinary := binary.Read(msgLengthDecodeBuf, binary.BigEndian, &length)
 	if errBinary != nil {
-		util.EPrintf("labtcp ReadMessage: %s\n", errBinary)
+		// util.EPrintf("labtcp ReadMessage: %s\n", errBinary)
+        return []byte{}, errBinary
 	}
 	util.TPrintf("ReadMessage length: %d\n", length)
 
@@ -170,8 +173,9 @@ func ReadMessage(conn *net.TCPConn) []byte {
 	for i := 0; i < int(length); i++ {
 		response, err := reader.ReadByte()
 		if err != nil {
-			util.EPrintf("labtcp ReadMessage: %s\n", err.Error())
-			break
+			// util.EPrintf("labtcp ReadMessage: %s\n", err.Error())
+			// break
+            return []byte{}, err
 		}
 		msgbuf[i] = response
 	}
@@ -183,7 +187,7 @@ func ReadMessage(conn *net.TCPConn) []byte {
 	//   // Cry
 	//   fmt.Println(err)
 	// }
-	return responseData
+	return responseData, nil
 }
 
 // TODO: This doesnt work... wtf
