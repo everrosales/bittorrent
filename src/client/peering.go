@@ -37,8 +37,9 @@ func (cl *BTClient) connectToPeer(addr string) {
 }
 
 func (cl *BTClient) requestBlock(piece int, block int) {
+	util.TPrintf("want to request block, current peers %v", cl.peers)
 	for addr, peer := range cl.peers {
-		// util.TPrintf("peer bitfield: %v\n", peer.Bitfield)
+		util.TPrintf("peer bitfield: %v\n", peer.Bitfield)
 		if peer.Bitfield[piece] && !peer.Status.PeerChoking {
 			util.Printf("requesting piece %d block %d from peer %s\n", piece, block, addr)
 			begin := block * fs.BlockSize
@@ -48,16 +49,20 @@ func (cl *BTClient) requestBlock(piece int, block int) {
 }
 
 func (cl *BTClient) sendBlock(index int, begin int, length int, peer *btnet.Peer) {
+	util.TPrintf("in sendBlock\n")
 	if !cl.PieceBitmap[index] {
+		util.TPrintf("we don't have this piece\n")
 		// we don't have this piece yet
 		return
 	}
 	if length != fs.BlockSize {
+		util.TPrintf("different block size\n")
 		// the requester is using a different block size
 		// deny the request for simplicity
 		return
 	}
 	if begin%fs.BlockSize != 0 {
+		util.TPrintf("not aligned with a block\n")
 		return
 	}
 	blockIndex := begin / fs.BlockSize
@@ -67,6 +72,7 @@ func (cl *BTClient) sendBlock(index int, begin int, length int, peer *btnet.Peer
 }
 
 func (cl *BTClient) saveBlock(index int, begin int, length int, block []byte) {
+	util.TPrintf("in saveBlock\n")
 	if begin%fs.BlockSize != 0 {
 		return
 	}
@@ -110,7 +116,7 @@ func (cl *BTClient) loadPieces(data []byte) {
 
 func (cl *BTClient) sendRequestMessage(peer *btnet.Peer, index int, begin int, length int) {
 	message := btnet.PeerMessage{
-		Type:   btnet.Piece,
+		Type:   btnet.Request,
 		Index:  int32(index),
 		Begin:  begin,
 		Length: length}
@@ -279,12 +285,12 @@ func (cl *BTClient) messageHandler(conn *net.TCPConn) {
 	for ok {
 		// Process the message
 		buf, err := btnet.ReadMessage(conn)
-		if err != nil {
-			util.EPrintf("%s\n", err)
-			return
-		}
+        if err != nil {
+            util.EPrintf("%s\n",err)
+            return
+        }
 		peerMessage := btnet.DecodePeerMessage(buf, cl.torrentMeta)
-		util.TPrintf("Received PeerMessage, type: %v\n%v\n", peerMessage.Type, peerMessage)
+        util.TPrintf("Received PeerMessage, type: %v\n", peerMessage.Type)
 		// Massive switch case that would handle incoming messages depending on message type
 
 		// peerMessage := btnet.PeerMessage{}  // empty for now, TODO
@@ -318,6 +324,7 @@ func (cl *BTClient) messageHandler(conn *net.TCPConn) {
 			case btnet.Request:
 				cl.sendBlock(int(peerMessage.Index), peerMessage.Begin, peerMessage.Length, peer)
 			case btnet.Piece:
+				util.TPrintf("received piece msg\n")
 				cl.saveBlock(int(peerMessage.Index), peerMessage.Begin, peerMessage.Length, peerMessage.Block)
 			case btnet.Cancel:
 				// TODO
