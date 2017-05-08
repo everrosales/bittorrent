@@ -88,28 +88,37 @@ func (cl *BTClient) sendBlock(index int, begin int, length int, peer *btnet.Peer
 func (cl *BTClient) saveBlock(index int, begin int, length int, block []byte) {
 	util.TPrintf("in saveBlock\n")
 	if begin%fs.BlockSize != 0 {
-		return
-	}
-	if length < fs.BlockSize {
+		util.TPrintf("not aligned with a block\n")
 		return
 	}
 	blockIndex := begin / fs.BlockSize
 	util.TPrintf("saving piece %d, block %d\n", index, blockIndex)
 	cl.lock("peering/saveBlock")
-	cl.Pieces[index].Blocks[blockIndex] = block[:fs.BlockSize]
+	if length < fs.BlockSize {
+		util.TPrintf("len less than BlockSize\n")
+		cl.Pieces[index].Blocks[blockIndex] = block
+	} else {
+		cl.Pieces[index].Blocks[blockIndex] = block[:fs.BlockSize]
+	}
 
 	if _, ok := cl.blockBitmap[index]; !ok {
 		cl.blockBitmap[index] = make([]bool, cl.numBlocks(index), cl.numBlocks(index))
 	}
 	cl.blockBitmap[index][blockIndex] = true
+	util.TPrintf("bitmaps %v %v\n", cl.PieceBitmap, cl.blockBitmap)
 
 	if allTrue(cl.blockBitmap[index]) {
+		util.TPrintf("got all blocks for piece\n")
 		// hash and save piece
 		if cl.Pieces[index].Hash() != cl.torrentMeta.PieceHashes[index] {
+			util.TPrintf("hash didn't match\n")
+			util.TPrintf("%s != %s\n", cl.Pieces[index].Hash(), cl.torrentMeta.PieceHashes[index])
+			util.TPrintf("hash lens %d, %d", len(cl.Pieces[index].Hash()), len(cl.torrentMeta.PieceHashes[index]))
 			delete(cl.blockBitmap, index)
 			cl.unlock("peering/saveBlock")
 			return
 		}
+		util.TPrintf("saving piece\n")
 		cl.PieceBitmap[index] = true
 		pieceBitmap := make([]bool, len(cl.PieceBitmap))
 		copy(pieceBitmap, cl.PieceBitmap)
@@ -119,9 +128,9 @@ func (cl *BTClient) saveBlock(index int, begin int, length int, block []byte) {
 		cl.persister.persistPieces(pieces, pieceBitmap)
 	}
 
-	for _, peer := range cl.peers {
+	for i := range cl.peers {
 		// send have message
-		cl.sendHaveMessage(peer, index, begin, length)
+		cl.sendHaveMessage(cl.peers[i], index, begin, length)
 	}
 }
 
@@ -169,29 +178,31 @@ func (cl *BTClient) sendHaveMessage(peer *btnet.Peer, index int, begin int, leng
 func (cl *BTClient) SetupPeerConnections(addr *net.TCPAddr, conn *net.TCPConn) {
 	// Try dialing
 	// connection := DoDial(addr, data)
-	cl.lock("peering/setupPeerConnections 1")
+
 	infoHash := fs.GetInfoHash(fs.ReadTorrent(cl.torrentPath))
 	peerId := cl.peerId
 	bitfieldLength := cl.numPieces
-	pieceBitmap := make([]bool, len(cl.PieceBitmap))
-	copy(pieceBitmap, cl.PieceBitmap)
-	cl.unlock("peering/setupPeerConnections 1")
-	peer := btnet.InitializePeer(addr, infoHash, peerId, bitfieldLength, conn, pieceBitmap)
+	// util.Printf("Grabbing SetupPeerConnections lock\n")
+	// util.Printf("Got SetupPeerConnections lock\n")
+	peer := btnet.InitializePeer(addr, infoHash, peerId, bitfieldLength, conn, cl.PieceBitmap)
 	if peer == nil {
 		// We got a bad handshake so drop the connection
 		return
 	}
-	cl.lock("peering/setupPeerConnections 2")
+	cl.mu.Lock()
 	cl.peers[addr.String()] = peer
-	cl.unlock("peering/setupPeerConnections 2")
+	cl.mu.Unlock()
 
 	// Start go routine that handles the closing of the tcp connection if we dont
 	// get a keepAlive signal
 	// Separate go routine for sending keepalive signals
 	go func() {
 		for {
+			// util.Printf("Grabbing msgQueue lock\n")
+			// util.Printf("Got msgQueue lock\n")
 			if peer == nil || peer.Conn.RemoteAddr() == nil {
 				// util.Printf("Remote conncetion closed?\n")
+				// cl.mu.Unlock()
 				return
 			}
 			var msg btnet.PeerMessage
@@ -223,6 +234,7 @@ func (cl *BTClient) SetupPeerConnections(addr *net.TCPAddr, conn *net.TCPConn) {
 					// util.EPrintf("Closing the connection\n")
 					peer.Conn.Close()
 				}
+				// cl.mu.Unlock()
 				return
 			}
 			util.Printf("Sent message type: %v\n", msg.Type)
@@ -240,11 +252,13 @@ func (cl *BTClient) SetupPeerConnections(addr *net.TCPAddr, conn *net.TCPConn) {
 					peer.Conn.Close()
 					util.EPrintf("Closing the connection again\n")
 				}
-				cl.lock("peering/setupPeerConnections keepAlive")
+				// util.Printf("Grabbing KeepAliveTimeout lock\n")
+				cl.mu.Lock()
+				// util.Printf("Got KeepAliveTimeout lock\n")
 				util.EPrintf("KeepAliveTIMEOUT EXCEEDED port: %v\n", cl.port)
 				delete(cl.peers, peer.Addr.String())
 				// cl.peers[addr] = nil
-				cl.unlock("peering/setupPeerConnections keepAlive")
+				cl.mu.Unlock()
 				return
 			}
 		}
@@ -337,6 +351,7 @@ func (cl *BTClient) messageHandler(conn *net.TCPConn) {
 			case btnet.Bitfield:
 				peer.Bitfield = peerMessage.Bitfield
 			case btnet.Request:
+				util.TPrintf("received request msg\n")
 				cl.sendBlock(int(peerMessage.Index), peerMessage.Begin, peerMessage.Length, peer)
 			case btnet.Piece:
 				util.TPrintf("received piece msg\n")

@@ -63,7 +63,8 @@ func StartBTClient(ip string, port int, metadataPath string, seedPath string, pe
 	cl.blockBitmap = make(map[int][]bool)
 	cl.neededPieces = make(chan int)
 	cl.Pieces = make([]fs.Piece, cl.numPieces, cl.numPieces)
-	for i, piece := range cl.Pieces {
+	for i := range cl.Pieces {
+		piece := &cl.Pieces[i]
 		piece.Blocks = make([]fs.Block, cl.numBlocks(i), cl.numBlocks(i))
 	}
 	cl.PieceBitmap = make([]bool, cl.numPieces, cl.numPieces)

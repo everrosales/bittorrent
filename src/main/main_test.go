@@ -45,21 +45,24 @@ func TestTwoClients(t *testing.T) {
 	res := loadDataFromPersister(downloaderPersister)
 	metadata := fs.Read(file)
 
+	os.Remove(seederPersister.Path)
+	os.Remove(downloaderPersister.Path)
+
 	if len(res.Pieces) != len(metadata.PieceHashes) {
 		util.EPrintf("Client has %d pieces but expected %d pieces\n", len(res.Pieces), len(metadata.PieceHashes))
 		t.Fail()
 		return
 	}
+
+	util.TPrintf("piece bitmap %v", res.PieceBitmap)
 	for i, hash := range metadata.PieceHashes {
 		if res.Pieces[i].Hash() != hash {
-			util.EPrintf("Piece did not hash correctly\n")
+			util.EPrintf("Piece %d did not hash correctly\n%s != %s\n", i, res.Pieces[i].Hash(), hash)
 			t.Fail()
 			return
 		}
 	}
 
-	os.Remove(seederPersister.Path)
-	os.Remove(downloaderPersister.Path)
-
+	util.Printf("Pass!")
 	util.EndTest()
 }
