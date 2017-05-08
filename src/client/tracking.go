@@ -64,7 +64,7 @@ func (cl *BTClient) contactTracker(baseUrl string) TrackerRes {
 		util.EPrintf("Received error sending to tracker: %s\n", err)
 	}
 	res := TrackerRes{}
-	fs.Decode(string(byteRes), &res)
+	fs.Decode(byteRes, &res)
 	if res.Failure != "" {
 		util.EPrintf("Received error from tracker: %s\n", res.Failure)
 	}

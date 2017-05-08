@@ -35,7 +35,7 @@ func StartTCPServer(addr string, handler func(*net.TCPConn)) {
 }
 
 func DoDial(addr *net.TCPAddr, data []byte) *net.TCPConn {
-	util.Printf("Dialing: %v\n", addr.String())
+	util.IPrintf("Dialing: %v\n", addr.String())
 	conn, err := net.DialTCP("tcp", nil, addr)
 	if err != nil {
 		// Cry
@@ -188,13 +188,12 @@ func IsConnectionClosed(conn *net.TCPConn) bool {
 	one := []byte{}
 	conn.SetReadDeadline(time.Now())
 	if data, err := conn.Read(one); err == io.EOF {
-		// l.Printf(logger.LevelDebug, "%s detected closed LAN connection", id)
 		conn.Close()
 		// conn = nil
 		return true
 	} else {
 		// var zero time.Time
-		util.Printf("This is the data: %v, %v\n", data, err)
+		util.TPrintf("This is the data: %v, %v\n", data, err)
 		conn.SetReadDeadline(time.Now().Add(10 * time.Millisecond))
 		return false
 	}

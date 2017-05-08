@@ -318,7 +318,7 @@ func (cl *BTClient) messageHandler(conn *net.TCPConn) {
 			util.EPrintf("%s\n", err)
 			return
 		}
-		peerMessage := btnet.DecodePeerMessage(buf, cl.torrentMeta)
+		peerMessage := btnet.DecodePeerMessage(buf, len(cl.torrentMeta.PieceHashes))
 		util.TPrintf("Received PeerMessage, type: %v\n", peerMessage.Type)
 		// Massive switch case that would handle incoming messages depending on message type
 

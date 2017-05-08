@@ -101,10 +101,9 @@ func runMessageTests(testname string, msg PeerMessage, bytes []byte, t *testing.
 
 func runDecodeTest(testname string, input []byte, expected PeerMessage, t *testing.T) {
 	util.StartTest("Testing decode " + testname + " message...")
-	actual := DecodePeerMessage(input)
+	actual := DecodePeerMessage(input, 0)
 	if !reflect.DeepEqual(actual, expected) {
-		util.Printf("%v, %v", actual, expected)
-		t.Fatalf("expected != actual")
+		t.Fatalf("have %v, expected %v\n", actual, expected)
 	}
 	util.EndTest()
 }
@@ -113,8 +112,7 @@ func runEncodeTest(testname string, input PeerMessage, expected []byte, t *testi
 	util.StartTest("Testing encode " + testname + " message...")
 	actual := EncodePeerMessage(input)
 	if !util.ByteArrayEquals(actual, expected) {
-		util.Printf("%v, %v", actual, expected)
-		t.Fatalf("expected != actual")
+		t.Fatalf("have %v, expected %v\n", actual, expected)
 	}
 	util.EndTest()
 }

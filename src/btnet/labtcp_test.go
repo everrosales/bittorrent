@@ -11,9 +11,8 @@ func init() {
 }
 
 // Test
-func testTCPHandler(conn net.Conn) {
+func testTCPHandler(tcpConn *net.TCPConn) {
 	// Assume this is a TCP connection
-	tcpConn := conn.(*net.TCPConn)
 	b := make([]byte, 128)
 	_, err := tcpConn.Read(b)
 	if err != nil {
@@ -36,9 +35,12 @@ func TestTCP(t *testing.T) {
 
 	conn := DoDial(tcpAddr, data)
 	util.TPrintf("data: %v\n", data)
-	actual := ReadMessage(conn)
+	actual, err := ReadMessage(conn)
 	expected := []byte{0x00, 0x00, 0x00, 0x05, 0x04, 0x00, 0x00, 0x80, 0x00}
 
+	if err != nil {
+		t.Fatalf("Err: %s\n", err.Error())
+	}
 	if !util.ByteArrayEquals(expected, actual) {
 		t.Fatalf("Expected %s, got %s\n", expected, actual)
 	}
@@ -47,10 +49,12 @@ func TestTCP(t *testing.T) {
 
 func TestSendPeerMessage(t *testing.T) {
 	util.StartTest("Test SendPeerMessage...")
-	sendPeerMessageHandler := func(conn net.Conn) {
-		tcpConn := conn.(*net.TCPConn)
-		b := ReadMessage(tcpConn)
-		util.Printf("Message: %v\n", b)
+	sendPeerMessageHandler := func(tcpConn *net.TCPConn) {
+		b, err := ReadMessage(tcpConn)
+		util.TPrintf("Message: %v\n", b)
+		if err != nil {
+			t.Fatalf("Err: %s\n", err.Error())
+		}
 	}
 
 	servAddr := "localhost:6667"

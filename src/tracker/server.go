@@ -32,6 +32,7 @@ type FailureResponse struct {
 
 func writeSuccess(w http.ResponseWriter, interval int, peers []map[string]string) (int, error) {
 	resp := fs.Encode(SuccessResponse{interval, peers})
+	util.TPrintf("[resp] %v\n", peers)
 	fmt.Fprintf(w, resp)
 	return 200, nil
 }
@@ -56,6 +57,7 @@ func (ah appHandler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 
 // handle GET /
 func IndexHandler(tr *BTTracker, w http.ResponseWriter, r *http.Request) (int, error) {
+	w.Header().Set("Content-Type", "text/plain; charset=utf-8")
 	// parsing query params
 	infoHash := r.URL.Query().Get("info_hash")
 	peerIdStr := peerId(r.URL.Query().Get("peer_id"))
@@ -94,7 +96,7 @@ func IndexHandler(tr *BTTracker, w http.ResponseWriter, r *http.Request) (int, e
 	peers := tr.getPeerList()
 	tr.mu.Unlock()
 
-	util.TPrintf("[%s] req %s (ip: %s:%s), %d peer(s)\n", reqTime.Format("2006-01-02 15:04:05.9999"), peerIdStr, ip, port, numPeers)
+	util.TPrintf("[%s] req %s (ip: %s:%d), %d peer(s)\n", reqTime.Format("2006-01-02 15:04:05.9999"), peerIdStr, ip, port, numPeers)
 	return writeSuccess(w, DefaultInterval, peers)
 }
 

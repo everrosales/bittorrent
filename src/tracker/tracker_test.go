@@ -95,13 +95,13 @@ func TestBasicRequest(t *testing.T) {
 		t.Fatalf("%s\n", err.Error())
 	}
 	respF := FailureResponse{}
-	fs.Decode(string(bodyBytes), &respF)
+	fs.Decode(bodyBytes, &respF)
 	if respF.Failure != "" {
 		tr.Kill()
 		t.Fatalf("Received failure response from server: %s", respF.Failure)
 	}
 	respS := SuccessResponse{}
-	fs.Decode(string(bodyBytes), &respS)
+	fs.Decode(bodyBytes, &respS)
 	me := respS.Peers[0]
 	if me["peer id"] != Peer1 {
 		tr.Kill()
@@ -130,7 +130,7 @@ func TestBadInfoHashRequest(t *testing.T) {
 		t.Fatalf("%s\n", err.Error())
 	}
 	respF := FailureResponse{}
-	fs.Decode(string(bodyBytes), &respF)
+	fs.Decode(bodyBytes, &respF)
 	if !strings.Contains(respF.Failure, "invalid infohash") {
 		tr.Kill()
 		t.Fatalf("Expected invalid infohash response from server")
@@ -150,7 +150,7 @@ func TestBadPortRequest(t *testing.T) {
 		t.Fatalf("%s\n", err.Error())
 	}
 	respF := FailureResponse{}
-	fs.Decode(string(bodyBytes), &respF)
+	fs.Decode(bodyBytes, &respF)
 	if !strings.Contains(respF.Failure, "bad parameter") {
 		tr.Kill()
 		t.Fatalf("Expected bad parameter response from server")
@@ -170,7 +170,7 @@ func TestBadPeerIdRequest(t *testing.T) {
 		t.Fatalf("%s\n", err.Error())
 	}
 	respF := FailureResponse{}
-	fs.Decode(string(bodyBytes), &respF)
+	fs.Decode(bodyBytes, &respF)
 	if !strings.Contains(respF.Failure, "invalid peerId") {
 		tr.Kill()
 		t.Fatalf("Expected invalid peerId response from server")
@@ -190,7 +190,7 @@ func TestMultiplePeersBasic(t *testing.T) {
 		t.Fatalf("%s\n", err.Error())
 	}
 	respS := SuccessResponse{}
-	fs.Decode(string(bodyBytes), &respS)
+	fs.Decode(bodyBytes, &respS)
 	_, err = findPeer(Peer1, respS.Peers)
 	if len(respS.Peers) != 1 || err != nil {
 		tr.Kill()
@@ -204,7 +204,7 @@ func TestMultiplePeersBasic(t *testing.T) {
 		t.Fatalf("%s\n", err.Error())
 	}
 	respS = SuccessResponse{}
-	fs.Decode(string(bodyBytes), &respS)
+	fs.Decode(bodyBytes, &respS)
 	_, err1 := findPeer(Peer1, respS.Peers)
 	_, err2 := findPeer(Peer2, respS.Peers)
 	if len(respS.Peers) != 2 || err1 != nil || err2 != nil {
@@ -235,7 +235,7 @@ func TestManyPeers(t *testing.T) {
 			t.Fatalf("%s\n", err.Error())
 		}
 		respS = SuccessResponse{}
-		fs.Decode(string(bodyBytes), &respS)
+		fs.Decode(bodyBytes, &respS)
 		_, err = findPeer(peerIdStr, respS.Peers)
 		if len(respS.Peers) != i+1 || err != nil {
 			tr.Kill()
@@ -251,7 +251,7 @@ func TestManyPeers(t *testing.T) {
 			t.Fatalf("%s\n", err.Error())
 		}
 		respS = SuccessResponse{}
-		fs.Decode(string(bodyBytes), &respS)
+		fs.Decode(bodyBytes, &respS)
 		_, err = findPeer(peerIdStr, respS.Peers)
 		if len(respS.Peers) != 50 {
 			tr.Kill()
@@ -275,7 +275,7 @@ func TestMultiplePeersTimeout(t *testing.T) {
 		t.Fatalf("%s\n", err.Error())
 	}
 	respS := SuccessResponse{}
-	fs.Decode(string(bodyBytes), &respS)
+	fs.Decode(bodyBytes, &respS)
 	_, err1 = findPeer(Peer1, respS.Peers)
 	if len(respS.Peers) != 1 || err1 != nil {
 		tr.Kill()
@@ -289,7 +289,7 @@ func TestMultiplePeersTimeout(t *testing.T) {
 		t.Fatalf("%s\n", err.Error())
 	}
 	respS = SuccessResponse{}
-	fs.Decode(string(bodyBytes), &respS)
+	fs.Decode(bodyBytes, &respS)
 	_, err1 = findPeer(Peer1, respS.Peers)
 	_, err2 = findPeer(Peer2, respS.Peers)
 	if len(respS.Peers) != 2 || err1 != nil || err2 != nil {
@@ -304,7 +304,7 @@ func TestMultiplePeersTimeout(t *testing.T) {
 		t.Fatalf("%s\n", err.Error())
 	}
 	respS = SuccessResponse{}
-	fs.Decode(string(bodyBytes), &respS)
+	fs.Decode(bodyBytes, &respS)
 	_, err1 = findPeer(Peer1, respS.Peers)
 	_, err2 = findPeer(Peer2, respS.Peers)
 	_, err3 = findPeer(Peer3, respS.Peers)
@@ -323,7 +323,7 @@ func TestMultiplePeersTimeout(t *testing.T) {
 		t.Fatalf("%s\n", err.Error())
 	}
 	respS = SuccessResponse{}
-	fs.Decode(string(bodyBytes), &respS)
+	fs.Decode(bodyBytes, &respS)
 	_, err1 = findPeer(Peer1, respS.Peers)
 	_, err2 = findPeer(Peer2, respS.Peers)
 	_, err3 = findPeer(Peer3, respS.Peers)
@@ -339,7 +339,7 @@ func TestMultiplePeersTimeout(t *testing.T) {
 		t.Fatalf("%s\n", err.Error())
 	}
 	respS = SuccessResponse{}
-	fs.Decode(string(bodyBytes), &respS)
+	fs.Decode(bodyBytes, &respS)
 	_, err1 = findPeer(Peer1, respS.Peers)
 	_, err2 = findPeer(Peer2, respS.Peers)
 	_, err3 = findPeer(Peer3, respS.Peers)
@@ -358,7 +358,7 @@ func TestMultiplePeersTimeout(t *testing.T) {
 		t.Fatalf("%s\n", err.Error())
 	}
 	respS = SuccessResponse{}
-	fs.Decode(string(bodyBytes), &respS)
+	fs.Decode(bodyBytes, &respS)
 	_, err1 = findPeer(Peer1, respS.Peers)
 	_, err2 = findPeer(Peer2, respS.Peers)
 	_, err3 = findPeer(Peer3, respS.Peers)
@@ -377,7 +377,7 @@ func TestMultiplePeersTimeout(t *testing.T) {
 		t.Fatalf("%s\n", err.Error())
 	}
 	respS = SuccessResponse{}
-	fs.Decode(string(bodyBytes), &respS)
+	fs.Decode(bodyBytes, &respS)
 	_, err1 = findPeer(Peer1, respS.Peers)
 	_, err2 = findPeer(Peer2, respS.Peers)
 	_, err3 = findPeer(Peer3, respS.Peers)

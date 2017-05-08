@@ -48,7 +48,7 @@ func ReadTorrent(path string) Torrent {
 		panic(err)
 	}
 	torrent := Torrent{}
-	Decode(string(fileBytes), &torrent)
+	Decode(fileBytes, &torrent)
 	if len(torrent.Info) == 0 {
 		// empty torrent
 		panic("Torrent " + path + " was empty or not decoded properly")

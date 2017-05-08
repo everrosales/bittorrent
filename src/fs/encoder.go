@@ -19,9 +19,9 @@ func Encode(obj interface{}) string {
 }
 
 // decode string to interface
-func Decode(data string, obj interface{}) {
+func Decode(data []byte, obj interface{}) {
 	var buf bytes.Buffer
-	buf.WriteString(data)
+	buf.Write(data)
 	dec := bencode.NewDecoder(&buf)
 	dec.Decode(&obj)
 }
