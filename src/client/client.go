@@ -144,7 +144,9 @@ func (cl *BTClient) downloadPieces() {
 		cl.mu.Lock()
 		// util.Printf("Got downloadPieces lock\n")
 		if !cl.PieceBitmap[piece] {
+			cl.mu.Unlock()
 			cl.downloadPiece(piece)
+			cl.mu.Lock()
 		}
 		cl.mu.Unlock()
 
@@ -157,9 +159,7 @@ func (cl *BTClient) downloadPieces() {
 			util.TPrintf("piece was not downloaded")
 			// piece still not downloaded, add it back to queue
 			go func() {
-				util.TPrintf("adding piece back to queue")
 				cl.neededPieces <- piece
-				util.TPrintf("added piece back to queue")
 			}()
 		}
 		cl.mu.Unlock()
