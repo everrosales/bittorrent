@@ -32,7 +32,7 @@ type FailureResponse struct {
 
 func writeSuccess(w http.ResponseWriter, interval int, peers []map[string]string) (int, error) {
 	resp := fs.Encode(SuccessResponse{interval, peers})
-	util.TPrintf("[resp] %v\n", peers)
+	util.TPrintf("[resp] %v\n", resp)
 	fmt.Fprintf(w, resp)
 	return 200, nil
 }
