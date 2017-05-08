@@ -89,7 +89,9 @@ func StartBTClient(ip string, port int, metadataPath string, seedPath string, pe
 }
 
 func (cl *BTClient) Seed(file string) {
+    // util.Printf("Grabbing Seed lock\n")
 	cl.mu.Lock()
+    // util.Printf("Got seed lock\n")
 	cl.Pieces = fs.SplitIntoPieces(file, int(cl.torrent.PieceLen))
 	for i := range cl.PieceBitmap{
 		cl.PieceBitmap[i] = true
@@ -126,7 +128,8 @@ func (cl *BTClient) downloadPiece(piece int) {
 		cl.blockBitmap[piece] = make([]bool, cl.numBlocks(piece), cl.numBlocks(piece))
 	}
 	for i:=0; i<cl.numBlocks(piece); i++ {
-		go cl.requestBlock(piece, i)
+		// go cl.requestBlock(piece, i)
+        cl.requestBlock(piece, i)
 	}
 }
 
@@ -136,8 +139,9 @@ func (cl *BTClient) downloadPieces() {
 			return
 		}
 		piece := <- cl.neededPieces
-
+        // util.Printf("Grabbing downloadPieces lock\n")
 		cl.mu.Lock()
+        // util.Printf("Got downloadPieces lock\n")
 		if !cl.PieceBitmap[piece] {
 			cl.downloadPiece(piece)
 		}
@@ -145,7 +149,9 @@ func (cl *BTClient) downloadPieces() {
 
 		util.Wait(200)
 
+        // util.Printf("Grabbing downloadPieces lock v2\n")
 		cl.mu.Lock()
+        // util.Printf("Got downloadPieces lock v2\n")
 		if !cl.PieceBitmap[piece] {
 			// piece still not downloaded, add it back to queue
 			go func() {
@@ -153,6 +159,7 @@ func (cl *BTClient) downloadPieces() {
 			}()
 		}
 		cl.mu.Unlock()
+        util.Wait(200)
 	}
 }
 

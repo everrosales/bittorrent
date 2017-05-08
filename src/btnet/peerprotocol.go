@@ -78,13 +78,14 @@ func InitializePeer(addr *net.TCPAddr, infoHash string, peerId string, bitfieldL
 	peer.KeepAlive = make(chan bool, 100)
   // Create handshake
   // Handshake{Pstr: BT_PROTOCOL, InfoHash: []byte(infoHash), PeerId: []byte(peerId)}
-  if (conn != nil) {
+  if (conn != nil && conn.RemoteAddr() != nil) {
     // This happens if we are not the ones initializing the communication
     data := ReadHandshake(conn)
+    util.Printf("CR: handshake\n")
     handshake := DecodeHandshake(data)
     // TODO: Process the handshake and drop connection if needed
     if (len(handshake.InfoHash) != 20) {
-        util.EPrintf("BAD handshake, killing the peer\n")
+        util.EPrintf("CR: BAD handshake, killing the peer\n")
         // Badly formatted hsandshake, dont make the connection stick
         conn.Close()
         return nil
@@ -94,18 +95,17 @@ func InitializePeer(addr *net.TCPAddr, infoHash string, peerId string, bitfieldL
         Type:     Bitfield,
         Bitfield: pieceBitmap}
     // util.TPrintf("sending message - %v\n", message)
-    util.TPrintf("Enqueuing bitfield message\n")
+    // util.TPrintf("Enqueuing bitfield message\n")
     peer.MsgQueue <- message
-    util.TPrintf("Finished enqueuing the mesage\n")
+    // util.TPrintf("Finished enqueuing the mesage\n")
     // cl.SendPeerMessage(&peer.Addr, message)
-
+    peer.Conn = *conn
   } else {
     handshake := Handshake{Pstr: BT_PROTOCOL, InfoHash: []byte(infoHash), PeerId: []byte(peerId)}
     data := EncodeHandshake(handshake)
 		// Sending data
 	peer.Conn = *DoDial(addr, data)
     // Read bitfield message that gets sent back
-
   }
 
 	return &peer
@@ -125,7 +125,7 @@ func DecodeHandshake(data []byte) Handshake {
   if errBinary != nil {
     util.EPrintf("labtcp DecodeHandshake: %s\n", errBinary)
   }
-  util.TPrintf("pstrLen: %d\n", pstrLen)
+  // util.TPrintf("pstrLen: %d\n", pstrLen)
 
 	if (len(data) < (49 + int(pstrLen))) {
 		util.EPrintf("Badly formatted data\n")
@@ -134,7 +134,7 @@ func DecodeHandshake(data []byte) Handshake {
 
   // Decode pstr
   pstr := string(data[1:int(pstrLen) + 1])
-  util.TPrintf("pstr: %s\n", pstr)
+  // util.TPrintf("pstr: %s\n", pstr)
 
   // Decode infoHash
   infoHashIndex := pstrLen + 9

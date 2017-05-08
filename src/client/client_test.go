@@ -51,7 +51,7 @@ func TestClientTCPServerNice(t *testing.T) {
 			0x00, 0x01, 0x02, 0x03, 0x04, 0x05, 0x06, 0x07, 0x08, 0x09}}
 	data := btnet.EncodeHandshake(handshake)
 	// Sending KeepAlive
-	util.TPrintf("Encoded data: %v\n", data)
+	// util.TPrintf("Encoded data: %v\n", data)
 	connection := btnet.DoDial(tcpAddr, data)
 	util.Wait(100)
 	_, ok := cl.peers[connection.LocalAddr().String()]
@@ -60,13 +60,14 @@ func TestClientTCPServerNice(t *testing.T) {
 		t.Fail()
 		return
 	}
-
+    util.Printf("Passed first bit\n")
 
     // connection.Read
 
 	msg := btnet.PeerMessage{Type: btnet.Interested}
 	data = btnet.EncodePeerMessage(msg)
 	// util.Printf("Making a connection\n")
+    connection.Write(data)
 	util.Wait(100)
 	_, ok = cl.peers[connection.LocalAddr().String()]
 	if !ok {
@@ -74,14 +75,21 @@ func TestClientTCPServerNice(t *testing.T) {
 		t.Fail()
 		return
 	}
+    connection.SetKeepAlive(false)
 
-	util.Wait(4000)
+
+    util.Printf("Passed second bit\n")
+
+	util.Wait(6000)
+    util.Printf("cl.peers: %v\n", cl.peers)
 	if len(cl.peers) > 0 {
 		util.EPrintf("There should be no peers connected\n")
+        cl.Kill()
 		t.Fail()
 	} else {
 		// util.Printf("Missing peer: %v\n", connection.LocalAddr())
 		// t.Fail()
+        cl.Kill()
 		util.EndTest()
 	}
 }
@@ -147,10 +155,12 @@ func TestClientTCPServer(t *testing.T) {
 	util.Wait(4000)
 	if len(cl.peers) > 0 {
 		util.EPrintf("There should be no peers connected\n")
+        cl.Kill()
 		t.Fail()
 	} else {
 		// util.Printf("Missing peer: %v\n", connection.LocalAddr())
 		// t.Fail()
+        cl.Kill()
 		util.EndTest()
 	}
 }
@@ -165,10 +175,11 @@ func TestTwoPeers(t *testing.T) {
 	util.Wait(1000)
     tcpAddr, _ := net.ResolveTCPAddr("tcp", "localhost:6669")
     first.SendPeerMessage(tcpAddr, btnet.PeerMessage{KeepAlive: true})
-    util.Wait(5000)
+    util.Wait(10000)
 	// TODO: Make sure they do something interest
     if len(second.peers) < 1 {
         t.Fatalf("second peer list does not include the first")
+        t.Fail()
     }
 
 	first.Kill()
