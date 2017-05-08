@@ -174,34 +174,45 @@ func (cl *BTClient) sendBlock(index int, begin int, length int, peer *btnet.Peer
 }
 
 func (cl *BTClient) saveBlock(index int, begin int, length int, block []byte) {
+	util.TPrintf("in saveBlock\n")
 	if begin%fs.BlockSize != 0 {
-		return
-	}
-	if length < fs.BlockSize {
+		util.TPrintf("not aligned with a block\n")
 		return
 	}
 	blockIndex := begin / fs.BlockSize
-	util.TPrintf("saving piece %d, block %d", index, blockIndex)
-	cl.Pieces[index].Blocks[blockIndex] = block[:fs.BlockSize]
+	util.TPrintf("saving piece %d, block %d\n", index, blockIndex)
+	if length < fs.BlockSize {
+		util.TPrintf("len less than BlockSize\n")
+		cl.Pieces[index].Blocks[blockIndex] = block
+	} else {
+		cl.Pieces[index].Blocks[blockIndex] = block[:fs.BlockSize]
+	}
+	// util.TPrintf("new piece struct %v", cl.Pieces)
 
 	if _, ok := cl.blockBitmap[index]; !ok {
 		cl.blockBitmap[index] = make([]bool, cl.numBlocks(index), cl.numBlocks(index))
 	}
 	cl.blockBitmap[index][blockIndex] = true
+	util.TPrintf("bitmaps %v %v\n", cl.PieceBitmap, cl.blockBitmap)
 
 	if allTrue(cl.blockBitmap[index]) {
+		util.TPrintf("got all blocks for piece\n")
 		// hash and save piece
 		if cl.Pieces[index].Hash() != cl.torrent.PieceHashes[index] {
+			util.TPrintf("hash didn't match\n")
+			util.TPrintf("%s != %s\n", cl.Pieces[index].Hash(), cl.torrent.PieceHashes[index])
+			util.TPrintf("hash lens %d, %d", len(cl.Pieces[index].Hash()), len(cl.torrent.PieceHashes[index]))
 			delete(cl.blockBitmap, index)
 			return
 		}
+		util.TPrintf("saving piece\n")
 		cl.PieceBitmap[index] = true
 		cl.persistPieces()
 	}
 
-	for _, peer := range cl.peers {
+	for i := range cl.peers {
 		// send have message
-		cl.sendHaveMessage(peer, index, begin, length)
+		cl.sendHaveMessage(cl.peers[i], index, begin, length)
 	}
 }
 

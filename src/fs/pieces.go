@@ -2,7 +2,6 @@ package fs
 
 import (
 	"crypto/sha1"
-	"encoding/base64"
 	"io/ioutil"
 	"math"
 )
@@ -20,13 +19,13 @@ func (piece *Piece) Hash() string {
 	for _, block := range piece.Blocks {
 		allBytes = append(allBytes, block...)
 	}
-	hash := make([]byte, 20)
-	actualHash := sha1.Sum(allBytes)
-
-	for i := 0; i < 20; i++ {
-		hash[i] = actualHash[i]
+	sha := sha1.Sum(allBytes)
+	n := len(sha)
+	if n != 20 {
+		panic("SHA hash generation failed")
 	}
-	return base64.URLEncoding.EncodeToString(hash)
+	shaStr := string(sha[:n])
+	return shaStr
 }
 
 func SplitIntoPieces(path string, pieceLen int) []Piece {
@@ -59,13 +58,13 @@ func NumBlocksInPiece(piece int, pieceLen int, totalLen int) int {
 	// returns the number of blocks for a given piece
 	var actualLen int
 	numPieces := NumPieces(pieceLen, totalLen)
-	if piece == numPieces-1 && totalLen%BlockSize != 0 {
+	if piece == numPieces-1 && totalLen%pieceLen != 0 {
 		// the last piece is irregular
-		actualLen = totalLen % BlockSize
+		actualLen = totalLen % pieceLen
 	} else {
 		actualLen = pieceLen
 	}
-	return int(math.Ceil(float64(actualLen / BlockSize)))
+	return int(math.Ceil(float64(actualLen) / float64(BlockSize)))
 }
 
 func NumPieces(pieceLen int, totalLen int) int {
