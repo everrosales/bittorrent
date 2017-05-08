@@ -81,7 +81,6 @@ func InitializePeer(addr *net.TCPAddr, infoHash string, peerId string, bitfieldL
   if (conn != nil && conn.RemoteAddr() != nil) {
     // This happens if we are not the ones initializing the communication
     data := ReadHandshake(conn)
-    util.Printf("CR: handshake\n")
     handshake := DecodeHandshake(data)
     // TODO: Process the handshake and drop connection if needed
     if (len(handshake.InfoHash) != 20) {
