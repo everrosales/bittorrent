@@ -1,8 +1,8 @@
 package util
 
 import (
-	"crypto/rand"
 	"fmt"
+	"math/rand"
 	"strings"
 	"time"
 )
@@ -31,6 +31,8 @@ const (
 	Cyan      color = "\033[36m"
 	Reset     color = "\033[0m"
 )
+
+const chars = "abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789"
 
 func StartTest(desc string) {
 	if Debug != None {
@@ -136,22 +138,22 @@ func SplitEveryN(str string, n int) []string {
 	slices := []string{}
 	lastIndex := 0
 	for i := range str {
-		if i == len(str) - 1 {
-	        slices = append(slices, str[lastIndex:])
-		} else if i - lastIndex == 20 {
-	        slices = append(slices, str[lastIndex:i])
-	        lastIndex = i
-	    }
+		if i == len(str)-1 {
+			slices = append(slices, str[lastIndex:])
+		} else if i-lastIndex == 20 {
+			slices = append(slices, str[lastIndex:i])
+			lastIndex = i
+		}
 	}
 	return slices
 }
 
 func GenerateRandStr(length int) string {
 	b := make([]byte, length)
-	if _, err := rand.Read(b); err != nil {
-		panic(err)
+	for i := range b {
+		b[i] = chars[rand.Intn(len(chars))]
 	}
-	return string(b[:length])
+	return string(b)
 }
 
 func BoolsToBytes(data []bool) []byte {
