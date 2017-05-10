@@ -160,7 +160,7 @@ func ReadMessage(conn *net.TCPConn) ([]byte, error) {
         }
         return []byte{}, err
     }
-    length := binary.BigEndian.Uint32(payload_length_msg)
+    length := binary.BigEndian.Uint32(msgLength)
     msg := make([]byte, length)
     _, err = io.ReadFull(conn, msg)
     if err != nil {
