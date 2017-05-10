@@ -26,6 +26,7 @@ func loadDataFromPersister(ps *btclient.Persister) btclient.BTClient {
 }
 
 func TestTwoClients(t *testing.T) {
+	util.StartTest("Testing integration with one seeder and one downloader...")
 	file := "puppy.jpg.torrent"
 	seed := "puppy.jpg"
 
@@ -54,7 +55,7 @@ func TestTwoClients(t *testing.T) {
 		return
 	}
 
-	util.TPrintf("piece bitmap %v", res.PieceBitmap)
+	util.TPrintf("piece bitmap %v\n", res.PieceBitmap)
 	for i, hash := range metadata.PieceHashes {
 		if res.Pieces[i].Hash() != hash {
 			util.EPrintf("Piece %d did not hash correctly\n%s != %s\n", i, res.Pieces[i].Hash(), hash)
@@ -63,6 +64,5 @@ func TestTwoClients(t *testing.T) {
 		}
 	}
 
-	util.Printf("Pass!")
 	util.EndTest()
 }

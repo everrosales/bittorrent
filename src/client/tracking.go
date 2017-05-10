@@ -43,7 +43,7 @@ func (cl *BTClient) trackerHeartbeat() {
 			}
 			myAddr, err := net.ResolveTCPAddr("tcp", cl.ip+":"+cl.port)
 			if addr.String() != myAddr.String() {
-				util.TPrintf("sending initial message to %v", addr)
+				util.TPrintf("sending initial message to %v\n", addr)
 				cl.SendPeerMessage(addr, btnet.PeerMessage{KeepAlive: true})
 			}
 		}

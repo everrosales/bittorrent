@@ -84,7 +84,7 @@ func InitializePeer(addr *net.TCPAddr, infoHash string, peerId string, bitfieldL
 		handshake := DecodeHandshake(data)
 		// TODO: Process the handshake and drop connection if needed
 		if len(handshake.InfoHash) != 20 {
-			util.EPrintf("CR: BAD handshake, killing the peer\n")
+			util.ColorPrintf(util.Purple, "CR: BAD handshake, closing the connection\n")
 			// Badly formatted hsandshake, dont make the connection stick
 			conn.Close()
 			return nil

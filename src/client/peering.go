@@ -191,9 +191,9 @@ func (cl *BTClient) SetupPeerConnections(addr *net.TCPAddr, conn *net.TCPConn) {
 		// We got a bad handshake so drop the connection
 		return
 	}
-	cl.mu.Lock()
+	cl.lock("peering/setup peer connnections 0")
 	cl.peers[addr.String()] = peer
-	cl.mu.Unlock()
+	cl.unlock("peering/setup peer connnections 0")
 
 	// Start go routine that handles the closing of the tcp connection if we dont
 	// get a keepAlive signal
@@ -233,7 +233,7 @@ func (cl *BTClient) SetupPeerConnections(addr *net.TCPAddr, conn *net.TCPConn) {
 				// TODO: Not sure if this is the right way of checking this
 				util.EPrintf("err: %v\n", err)
 				if peer.Conn.RemoteAddr() != nil {
-					// util.EPrintf("Closing the connection\n")
+					util.ColorPrintf(util.Purple, "Closing the connection in peering/SetupPeerConnections\n")
 					peer.Conn.Close()
 				}
 				// cl.mu.Unlock()
@@ -251,16 +251,13 @@ func (cl *BTClient) SetupPeerConnections(addr *net.TCPAddr, conn *net.TCPConn) {
 				// Do nothing, this is good
 			case <-time.After(peerTimeout):
 				if peer.Conn.RemoteAddr() != nil {
+					util.ColorPrintf(util.Purple, "Closing the connection in peering keepalive loop\n")
 					peer.Conn.Close()
-					util.EPrintf("Closing the connection again\n")
 				}
-				// util.Printf("Grabbing KeepAliveTimeout lock\n")
-				cl.mu.Lock()
-				// util.Printf("Got KeepAliveTimeout lock\n")
+				cl.lock("peering/keepalivetimeout")
 				util.EPrintf("KeepAliveTIMEOUT EXCEEDED port: %v\n", cl.port)
 				delete(cl.peers, peer.Addr.String())
-				// cl.peers[addr] = nil
-				cl.mu.Unlock()
+				cl.unlock("peering/keepalivetimeout")
 				return
 			}
 		}

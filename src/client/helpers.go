@@ -6,12 +6,12 @@ import (
 )
 
 func (cl *BTClient) lock(msg string) {
-	util.LPrintf("[LOCK] %s\n", msg)
+	util.LPrintf("[LOCK] %s: %s\n", cl.port, msg)
 	cl.mu.Lock()
 }
 
 func (cl *BTClient) unlock(msg string) {
-	util.LPrintf("[UNLOCK] %s\n", msg)
+	util.LPrintf("[UNLOCK] %s: %s\n", cl.port, msg)
 	cl.mu.Unlock()
 }
 

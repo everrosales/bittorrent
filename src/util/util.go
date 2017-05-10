@@ -82,7 +82,7 @@ func TPrintf(format string, a ...interface{}) (n int, err error) {
 //lock logging
 func LPrintf(format string, a ...interface{}) (n int, err error) {
 	if Debug <= Lock {
-		ColorPrintf(Default, format, a...)
+		ColorPrintf(Yellow, format, a...)
 	}
 	return
 }

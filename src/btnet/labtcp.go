@@ -188,6 +188,7 @@ func IsConnectionClosed(conn *net.TCPConn) bool {
 	one := []byte{}
 	conn.SetReadDeadline(time.Now())
 	if data, err := conn.Read(one); err == io.EOF {
+		util.ColorPrintf(util.Purple, "Closing the connection in labtcp/IsConnectionClosed\n")
 		conn.Close()
 		// conn = nil
 		return true
