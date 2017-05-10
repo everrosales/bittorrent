@@ -126,7 +126,9 @@ func (cl *BTClient) saveBlock(index int, begin int, length int, block []byte) {
 		copy(pieces, cl.Pieces)
 		cl.unlock("peering/saveBlock")
 		cl.persister.persistPieces(pieces, pieceBitmap)
+		cl.lock("peering/saveBlock")
 	}
+	cl.unlock("peering/saveBlock")
 
 	for i := range cl.peers {
 		// send have message
