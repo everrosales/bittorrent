@@ -1,8 +1,8 @@
 package btnet
 
 import (
-	"bufio"
-	"bytes"
+	// "bufio"
+	// "bytes"
 	"encoding/binary"
 	"io"
 	"net"
@@ -59,89 +59,22 @@ func ReadHandshake(conn *net.TCPConn) ([]byte, error) {
 	// 4) Check that the packets are reasonable
 	// 5) repeat 3
     util.TPrintf("Reading Handshake from: %s\n", conn.RemoteAddr().String())
-	reader := bufio.NewReader(conn)
-	// Grab the first 4 bytes
-	msgLength := make([]byte, 1)
-    // conn.SetReadDeadline(time.Now().Add(time.Millisecond * 2000))
-	response, err := reader.ReadByte()
-	if err != nil {
-		util.EPrintf("labtcp ReadHandshake: %s\n", err)
-        util.EPrintf("Failed Handshake\n")
+    msgLength := make([]byte, 1)
+    _, err := io.ReadFull(conn, msgLength)
+    if err != nil {
+        if err == io.EOF {
+            return []byte{}, nil
+        }
         return []byte{}, err
-	}
-	msgLength[0] = response
-
-	// util.TPrintf("msglength: %v\n", msgLength)
-	// Parse the length of the message
-	var length uint8
-	msgLengthDecodeBuf := bytes.NewReader(msgLength)
-	errBinary := binary.Read(msgLengthDecodeBuf, binary.BigEndian, &length)
-	if errBinary != nil {
-		util.EPrintf("labtcp ReadHandshake binaryDecode: %s\n", errBinary)
-        util.EPrintf("Failed Handshake\n")
+    }
+    length := int(msgLength[0]) + 48
+    msg := make([]byte, length)
+    _, err = io.ReadFull(conn, msg)
+    if err != nil {
         return []byte{}, err
-	}
-	// util.TPrintf("length: %d\n", int(length))
-
-	// Read pstr
-	pstrbuf := make([]byte, int(length))
-	for i := 0; i < int(length); i++ {
-        // conn.SetReadDeadline(time.Now().Add(time.Millisecond * 100))
-		response, err := reader.ReadByte()
-		if err != nil {
-			util.EPrintf("labtcp ReadHandshake: %s\n", err.Error())
-			responseData := append(msgLength, pstrbuf...)
-            util.EPrintf("Failed Handshake\n")
-			return responseData, err
-			// break
-		}
-		pstrbuf[i] = response
-
-	}
-
-	// Read zeros
-	zerobuf := make([]byte, 8)
-	for i := 0; i < 8; i++ {
-        // conn.SetReadDeadline(time.Now().Add(time.Millisecond * 100))
-		response, err := reader.ReadByte()
-		if err != nil {
-			util.EPrintf("labtcp ReadHandshake: %s\n", err.Error())
-			responseData := append(msgLength, zerobuf...)
-            util.EPrintf("Failed Handshake\n")
-			return responseData, err
-			// break
-		}
-		if response != 0 {
-			util.EPrintf("labtcp ReadHandshake: badly formatted handshake\n")
-			responseData := append(msgLength, zerobuf...)
-            util.EPrintf("Failed Handshake\n")
-			return responseData, err
-		}
-
-	}
-
-	// Cross fingers
-	// Read the number of bytes specified by length and hope it doesnt go out of sync
-	msgbuf := make([]byte, 40)
-	for i := 0; i < 40; i++ {
-        // conn.SetReadDeadline(time.Now().Add(time.Millisecond * 100))
-		response, err := reader.ReadByte()
-		if err != nil {
-			util.EPrintf("labtcp ReadHandshake: %s\n", err.Error())
-			responseData := append(msgLength, zerobuf...)
-			responseData = append(responseData, msgbuf...)
-            util.EPrintf("Failed Handshake\n")
-			return responseData, err
-			// break
-		}
-		msgbuf[i] = response
-	}
-
-	responseData := append(msgLength, pstrbuf...)
-	responseData = append(responseData, zerobuf...)
-	responseData = append(responseData, msgbuf...)
+    }
     util.TPrintf("Finished Handshake from: %s\n", conn.RemoteAddr().String())
-	return responseData, nil
+	return append(msgLength, msg...), nil
 }
 
 func ReadMessage(conn *net.TCPConn) ([]byte, error) {
