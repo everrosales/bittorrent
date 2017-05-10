@@ -210,14 +210,14 @@ func (cl *BTClient) SetupPeerConnections(addr *net.TCPAddr, conn *net.TCPConn) {
 			var msg btnet.PeerMessage
 			select {
 			case msg = <-peer.MsgQueue:
-				// util.TPrintf("Received message from msgqueue - Type: %v\n", msg.Type)
+				util.TPrintf("Received message from msgqueue - Type: %v\n", msg.Type)
 			case <-time.After(peerTimeout / 3):
 				msg = btnet.PeerMessage{KeepAlive: true}
 			}
 			data := btnet.EncodePeerMessage(msg)
 			// if (!msg.KeepAlive) {
 
-			util.TPrintf("Sending encoded message from: %v, to: %v, type: %v\n",
+			util.ColorPrintf(util.Cyan, "Sending encoded message from: %v, to: %v, type: %v\n",
 				peer.Conn.LocalAddr().String(), peer.Conn.RemoteAddr().String(), msg.Type)
 			// }
 			// We dont need a lock if only this thread is sending out TCP messages
@@ -239,7 +239,7 @@ func (cl *BTClient) SetupPeerConnections(addr *net.TCPAddr, conn *net.TCPConn) {
 				// cl.mu.Unlock()
 				return
 			}
-			util.Printf("Sent message type: %v\n", msg.Type)
+			util.Printf("Sent message type: %v, to: %s\n", msg.Type, peer.Conn.RemoteAddr().String())
 		}
 	}()
 
@@ -280,11 +280,17 @@ func (cl *BTClient) SendPeerMessage(addr *net.TCPAddr, message btnet.PeerMessage
 	if !ok {
 		cl.unlock("peering/sendPeerMessage")
 		cl.SetupPeerConnections(addr, nil)
-		cl.lock("peering/sendPeerMessage")
-		peer, _ = cl.peers[addr.String()]
+		peer, ok = cl.peers[addr.String()]
+        if !ok {
+            util.EPrintf("This is not working\n")
+        }
+        peer.MsgQueue <- message
+        // cl.lock("peering/sendPeerMessage")
+        return
 	}
-	cl.unlock("peering/sendPeerMessage")
-	peer.MsgQueue <- message
+
+    cl.unlock("peering/sendPeerMessage")
+    peer.MsgQueue <- message
 }
 
 func (cl *BTClient) messageHandler(conn *net.TCPConn) {
@@ -298,7 +304,6 @@ func (cl *BTClient) messageHandler(conn *net.TCPConn) {
 	// }
 	// Check if this is a new connection
 	// If so we need to initialize the Peer
-	util.TPrintf("~~~ Got a connection! ~~~\n")
 	if conn.RemoteAddr() == nil {
 		return
 	}
@@ -309,16 +314,17 @@ func (cl *BTClient) messageHandler(conn *net.TCPConn) {
 		return
 	}
 	// peer, ok = cl.peers[conn.RemoteAddr().String()]
-
+    util.TPrintf("~~~ Got a connection! ~~~\n")
 	for ok {
 		// Process the message
 		buf, err := btnet.ReadMessage(conn)
 		if err != nil {
 			util.EPrintf("%s\n", err)
+            conn.Close()
 			return
 		}
 		peerMessage := btnet.DecodePeerMessage(buf, len(cl.torrentMeta.PieceHashes))
-		util.TPrintf("Received PeerMessage, type: %v\n", peerMessage.Type)
+		util.ColorPrintf(util.Cyan, "Received PeerMessage, type: %v, from: %s\n", peerMessage.Type, conn.RemoteAddr().String())
 		// Massive switch case that would handle incoming messages depending on message type
 
 		// peerMessage := btnet.PeerMessage{}  // empty for now, TODO

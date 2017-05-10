@@ -80,7 +80,12 @@ func InitializePeer(addr *net.TCPAddr, infoHash string, peerId string, bitfieldL
 	// Handshake{Pstr: BT_PROTOCOL, InfoHash: []byte(infoHash), PeerId: []byte(peerId)}
 	if conn != nil && conn.RemoteAddr() != nil {
 		// This happens if we are not the ones initializing the communication
-		data := ReadHandshake(conn)
+		data, err := ReadHandshake(conn)
+        if err != nil {
+            util.EPrintf("%s\n", err)
+            conn.Close()
+            return nil
+        }
 		handshake := DecodeHandshake(data)
 		// TODO: Process the handshake and drop connection if needed
 		if len(handshake.InfoHash) != 20 {
@@ -101,6 +106,7 @@ func InitializePeer(addr *net.TCPAddr, infoHash string, peerId string, bitfieldL
 		handshake := Handshake{Pstr: BT_PROTOCOL, InfoHash: []byte(infoHash), PeerId: []byte(peerId)}
 		data := EncodeHandshake(handshake)
 		// Sending data
+        util.TPrintf("Sending Handshake\n")
 		peer.Conn = *DoDial(addr, data)
 
 		message := PeerMessage{

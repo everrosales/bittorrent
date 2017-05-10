@@ -69,3 +69,10 @@ func TestSendPeerMessage(t *testing.T) {
 }
 
 // TODO: theres a lot more logic in DoDial now... we should really test it
+// func TestSendHandshake(t *testing.T) {
+//     util.StartTest("Test SendHandshake...")
+//     sendHandshakeHandler := func(tcpConn *net.TCPConn) {
+//         b, err := ReadMessage(tcpConn)
+//     }
+//     util.EndTest()
+// }
