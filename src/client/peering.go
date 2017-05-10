@@ -51,11 +51,11 @@ func (cl *BTClient) getNumPeers() int {
 }
 
 func (cl *BTClient) requestBlock(piece int, block int) {
-	util.TPrintf("want to request block, current peers %v\n", cl.peers)
+	util.TPrintf("%s: want to request block, current peers %v\n", cl.port, cl.peers)
 	for addr, peer := range cl.peers {
-		util.TPrintf("peer bitfield: %v\n", peer.Bitfield)
+		util.TPrintf("%s: peer bitfield: %v\n", cl.port, peer.Bitfield)
 		if peer.Bitfield[piece] && !peer.Status.PeerChoking {
-			util.Printf("requesting piece %d block %d from peer %s\n", piece, block, addr)
+			util.Printf("%s: requesting piece %d block %d from peer %s\n", cl.port, piece, block, addr)
 			begin := block * fs.BlockSize
 			cl.sendRequestMessage(peer, piece, begin, fs.BlockSize)
 		}
@@ -63,39 +63,39 @@ func (cl *BTClient) requestBlock(piece int, block int) {
 }
 
 func (cl *BTClient) sendBlock(index int, begin int, length int, peer *btnet.Peer) {
-	util.TPrintf("in sendBlock\n")
+	util.TPrintf("%s: in sendBlock\n", cl.port)
 	if !cl.PieceBitmap[index] {
-		util.TPrintf("we don't have this piece\n")
+		util.TPrintf("%s: we don't have this piece\n", cl.port)
 		// we don't have this piece yet
 		return
 	}
 	if length != fs.BlockSize {
-		util.TPrintf("different block size\n")
+		util.TPrintf("%s: different block size\n", cl.port)
 		// the requester is using a different block size
 		// deny the request for simplicity
 		return
 	}
 	if begin%fs.BlockSize != 0 {
-		util.TPrintf("not aligned with a block\n")
+		util.TPrintf("%s: not aligned with a block\n", cl.port)
 		return
 	}
 	blockIndex := begin / fs.BlockSize
-	util.TPrintf("sending piece %d, block %d\n", index, blockIndex)
+	util.TPrintf("%s: sending piece %d, block %d\n", cl.port, index, blockIndex)
 	data := cl.Pieces[index].Blocks[blockIndex]
 	go cl.sendPieceMessage(peer, index, begin, length, data)
 }
 
 func (cl *BTClient) saveBlock(index int, begin int, length int, block []byte) {
-	util.TPrintf("in saveBlock\n")
+	util.TPrintf("%s: in saveBlock\n", cl.port)
 	if begin%fs.BlockSize != 0 {
-		util.TPrintf("not aligned with a block\n")
+		util.TPrintf("%s: not aligned with a block\n", cl.port)
 		return
 	}
 	blockIndex := begin / fs.BlockSize
-	util.TPrintf("saving piece %d, block %d\n", index, blockIndex)
+	util.TPrintf("%s: saving piece %d, block %d\n", cl.port, index, blockIndex)
 	cl.lock("peering/saveBlock")
 	if length < fs.BlockSize {
-		util.TPrintf("len less than BlockSize\n")
+		util.TPrintf("%s: len less than BlockSize\n", cl.port)
 		cl.Pieces[index].Blocks[blockIndex] = block
 	} else {
 		cl.Pieces[index].Blocks[blockIndex] = block[:fs.BlockSize]
@@ -105,20 +105,20 @@ func (cl *BTClient) saveBlock(index int, begin int, length int, block []byte) {
 		cl.blockBitmap[index] = make([]bool, cl.numBlocks(index), cl.numBlocks(index))
 	}
 	cl.blockBitmap[index][blockIndex] = true
-	util.TPrintf("bitmaps %v %v\n", cl.PieceBitmap, cl.blockBitmap)
+	util.TPrintf("%s: bitmaps %v %v\n", cl.port, cl.PieceBitmap, cl.blockBitmap)
 
 	if allTrue(cl.blockBitmap[index]) {
-		util.TPrintf("got all blocks for piece\n")
+		util.TPrintf("%s: got all blocks for piece\n", cl.port)
 		// hash and save piece
 		if cl.Pieces[index].Hash() != cl.torrentMeta.PieceHashes[index] {
-			util.TPrintf("hash didn't match\n")
-			util.TPrintf("%s != %s\n", cl.Pieces[index].Hash(), cl.torrentMeta.PieceHashes[index])
-			util.TPrintf("hash lens %d, %d", len(cl.Pieces[index].Hash()), len(cl.torrentMeta.PieceHashes[index]))
+			util.TPrintf("%s: hash didn't match\n", cl.port)
+			util.TPrintf("%s: %s != %s\n", cl.port, cl.Pieces[index].Hash(), cl.torrentMeta.PieceHashes[index])
+			util.TPrintf("%s: hash lens %d, %d", cl.port, len(cl.Pieces[index].Hash()), len(cl.torrentMeta.PieceHashes[index]))
 			delete(cl.blockBitmap, index)
 			cl.unlock("peering/saveBlock")
 			return
 		}
-		util.TPrintf("saving piece\n")
+		util.TPrintf("%s: saving piece\n", cl.port)
 		cl.PieceBitmap[index] = true
 		pieceBitmap := make([]bool, len(cl.PieceBitmap))
 		copy(pieceBitmap, cl.PieceBitmap)
@@ -350,10 +350,10 @@ func (cl *BTClient) messageHandler(conn *net.TCPConn) {
 			case btnet.Bitfield:
 				peer.Bitfield = peerMessage.Bitfield
 			case btnet.Request:
-				util.TPrintf("received request msg\n")
+				util.TPrintf("%s: received request msg\n", cl.port)
 				cl.sendBlock(int(peerMessage.Index), peerMessage.Begin, peerMessage.Length, peer)
 			case btnet.Piece:
-				util.TPrintf("received piece msg\n")
+				util.TPrintf("%s: received piece msg\n", cl.port)
 				cl.saveBlock(int(peerMessage.Index), peerMessage.Begin, peerMessage.Length, peerMessage.Block)
 			case btnet.Cancel:
 				// TODO
@@ -366,5 +366,5 @@ func (cl *BTClient) messageHandler(conn *net.TCPConn) {
 		// _, ok = cl.peers[conn.RemoteAddr().String()]
 		ok = conn.RemoteAddr() != nil
 	}
-	util.Printf("\nExiting messageHandler\n\n")
+	util.TPrintf("%s: exiting messageHandler\n", cl.port)
 }

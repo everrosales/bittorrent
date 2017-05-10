@@ -113,7 +113,7 @@ func (cl *BTClient) main() {
 	rand.Seed(time.Now().UnixNano())
 	go func() {
 		for i := range rand.Perm(cl.numPieces) {
-			util.TPrintf("adding piece %d to needed queue\n", i)
+			util.TPrintf("%s: adding piece %d to needed queue\n", cl.port, i)
 			cl.neededPieces <- i
 		}
 	}()

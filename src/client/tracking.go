@@ -36,14 +36,14 @@ func (cl *BTClient) trackerHeartbeat() {
 		}
 		res := cl.contactTracker(cl.torrentMeta.TrackerUrl)
 		for _, p := range res.Peers {
-			util.TPrintf("peerId %s, ip %s, port %s\n", p["peer id"], p["ip"], p["port"])
+			util.TPrintf("%s: peerId %s, ip %s, port %s\n", cl.port, p["peer id"], p["ip"], p["port"])
 			addr, err := net.ResolveTCPAddr("tcp", p["ip"]+":"+p["port"])
 			if err != nil {
 				panic(err)
 			}
 			myAddr, err := net.ResolveTCPAddr("tcp", cl.ip+":"+cl.port)
 			if addr.String() != myAddr.String() {
-				util.TPrintf("sending initial message to %v\n", addr)
+				util.TPrintf("%s: sending initial message to %v\n", cl.port, addr)
 				cl.SendPeerMessage(addr, btnet.PeerMessage{KeepAlive: true})
 			}
 		}
