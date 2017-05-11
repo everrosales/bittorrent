@@ -61,20 +61,20 @@ func (cl *BTClient) contactTracker(baseUrl string) TrackerRes {
 	cl.unlock("tracking/contactTracker 1")
 	byteRes, err := sendRequest(baseUrl, &request)
 	if err != nil {
-		util.EPrintf("Received error sending to tracker: %s\n", err)
+		util.WPrintf("Received error sending to tracker: %s\n", err)
 	}
 	res := TrackerRes{}
 	fs.Decode(byteRes, &res)
 	if res.Failure != "" {
-		util.EPrintf("Received error from tracker: %s\n", res.Failure)
+		util.WPrintf("Received error from tracker: %s\n", res.Failure)
 	}
 	for _, p := range res.Peers {
 		if _, ok := p["port"]; !ok {
-			util.EPrintf("bad peers response: %v\n", res.Peers)
+			util.WPrintf("bad peers response: %v\n", res.Peers)
 			panic("got port 0 from tracker")
 		}
 	}
-	util.IPrintf("Contacting tracker at %s (%d peers)\n", baseUrl, len(res.Peers))
+	util.TPrintf("Contacting tracker at %s (%d peers)\n", baseUrl, len(res.Peers))
 	cl.lock("tracking/contactTracker 2")
 	cl.heartbeatInterval = res.Interval
 	cl.unlock("tracking/contactTracker 2")

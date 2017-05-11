@@ -66,6 +66,13 @@ func EPrintf(format string, a ...interface{}) (n int, err error) {
 	return
 }
 
+func WPrintf(format string, a ...interface{}) (n int, err error) {
+    if Debug <= Info {
+        ColorPrintf(Cyan, "[WARNING] "+ format, a...)
+    }
+    return
+}
+
 // info logging
 func IPrintf(format string, a ...interface{}) (n int, err error) {
 	if Debug <= Info {
@@ -231,7 +238,7 @@ func MoveCursorUp(numlines int) {
 
 func ZeroCursor() {
     // Printf("\033[0G")
-    Printf("\033[2;0H")
+    Printf("\033[0;0H")
 }
 
 func MoveCursorDown(numlines int) {

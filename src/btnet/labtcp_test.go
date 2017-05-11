@@ -17,7 +17,7 @@ func testTCPHandler(tcpConn *net.TCPConn) {
 	_, err := tcpConn.Read(b)
 	if err != nil {
 		// do something
-		util.EPrintf("Error reading: %s\n", err)
+		util.WPrintf("Error reading: %s\n", err)
 	}
 	// fmt.Println(string(b) + "bytesRead: " + strconv.Itoa(bytesRead))
 	data := []byte{0x00, 0x00, 0x00, 0x05, 0x04, 0x00, 0x00, 0x80, 0x00}

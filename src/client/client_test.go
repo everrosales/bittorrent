@@ -60,7 +60,7 @@ func TestClientTCPServerNice(t *testing.T) {
 		t.Fail()
 		return
 	}
-	util.Printf("Passed first bit\n")
+	// util.Printf("Passed first bit\n")
 
 	returnedData, err := btnet.ReadMessage(connection)
 	decodedMsg := btnet.DecodePeerMessage(returnedData, len(cl.torrentMeta.PieceHashes))
@@ -84,10 +84,7 @@ func TestClientTCPServerNice(t *testing.T) {
 	}
 	connection.SetKeepAlive(false)
 
-	util.Printf("Passed second bit\n")
-
 	util.Wait(6000)
-	util.Printf("cl.peers: %v\n", cl.peers)
 	if cl.getNumPeers() > 0 {
 		util.EPrintf("There should be no peers connected\n")
 		cl.Kill()
