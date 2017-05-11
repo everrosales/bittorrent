@@ -16,6 +16,7 @@ import (
 // TODO: fix error with stopping tracker contact
 // TODO: pruning client's peer list when tracker says that peer is down
 // TODO: download pieces in parallel
+// TODO: run with -race and remove ALL RACES
 
 type status string
 
