@@ -116,7 +116,7 @@ func main() {
 				util.ZeroCursor()
 				status, _ = cl.GetStatusString()
 				util.Printf(status)
-				util.Wait(1)
+				util.Wait(100)
 			}
 		} else {
 			for !cl.CheckShutdown() {

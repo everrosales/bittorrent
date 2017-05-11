@@ -150,7 +150,7 @@ func (cl *BTClient) main() {
 		if cl.CheckShutdown() {
 			return
 		}
-		util.Wait(1000)
+		util.Wait(100)
 	}
 }
 

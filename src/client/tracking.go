@@ -39,17 +39,20 @@ func (cl *BTClient) trackerHeartbeat() {
 			util.TPrintf("%s: peerId %s, ip %s, port %s\n", cl.port, p["peer id"], p["ip"], p["port"])
 			addr, err := net.ResolveTCPAddr("tcp", p["ip"]+":"+p["port"])
 			if err != nil {
-				panic(err)
+				// panic(err)
+                continue
 			}
 			myAddr, err := net.ResolveTCPAddr("tcp", cl.ip+":"+cl.port)
 			if addr.String() != myAddr.String() {
 				util.TPrintf("%s: sending initial message to %v\n", cl.port, addr)
-				cl.SendPeerMessage(addr, btnet.PeerMessage{KeepAlive: true})
+				go cl.SendPeerMessage(addr, btnet.PeerMessage{KeepAlive: true})
 			}
 		}
 		cl.lock("tracking/trackerHeartbeat")
-		wait := cl.heartbeatInterval * 1000
-		cl.unlock("tracking/trackerHeartbeat")
+		// wait := cl.heartbeatInterval * 1000
+        // TODO: fix the heartbeatInterval
+        wait := 2000
+        cl.unlock("tracking/trackerHeartbeat")
 		util.Wait(wait)
 	}
 }
