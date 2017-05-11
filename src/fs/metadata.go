@@ -5,11 +5,12 @@ package fs
 import (
 	"crypto/sha1"
 	"io/ioutil"
-	"math"
 	"os"
 	"strings"
 	"util"
 )
+
+const PieceSize = 32768
 
 type Torrent struct {
 	// according to bittorrent spec
@@ -132,7 +133,7 @@ func Write(path string, data Metadata) {
 
 // read an input file (currently no support for directories) and
 // create a Metadata struct
-func GetMetadata(path string, trackerUrl string, fileName string, numPieces int) Metadata {
+func GetMetadata(path string, trackerUrl string, fileName string) Metadata {
 	f, err := os.Open(path)
 	if err != nil {
 		panic("Error opening file")
@@ -148,22 +149,13 @@ func GetMetadata(path string, trackerUrl string, fileName string, numPieces int)
 
 	fileInfo := FileData{fileSize, files}
 
-	if fileSize < int64(numPieces) {
-		panic("Too many pieces, not enough bytes in input file")
-	}
-
-	pieceSize := int(math.Ceil(float64(fileSize) / float64(numPieces)))
-
-	pieces := SplitIntoPieces(path, pieceSize)
-	if len(pieces) != numPieces {
-		panic("Piece sizes don't match up")
-	}
-	util.Printf("Pieces: %v\n", pieces)
+	pieces := SplitIntoPieces(path, PieceSize)
+	numPieces := NumPieces(int(fileSize), PieceSize)
 	pieceHashes := make([]string, numPieces)
 
 	for _, p := range pieces {
 		pieceHashes = append(pieceHashes, p.Hash())
 	}
 
-	return Metadata{trackerUrl, fileName, int64(numPieces), pieceHashes, []FileData{fileInfo}}
+	return Metadata{trackerUrl, fileName, PieceSize, pieceHashes, []FileData{fileInfo}}
 }

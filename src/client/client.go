@@ -2,6 +2,7 @@ package btclient
 
 import (
 	"btnet"
+	"fmt"
 	"fs"
 	"math/rand"
 	"strconv"
@@ -154,9 +155,9 @@ func (cl *BTClient) main() {
 }
 
 func (cl *BTClient) GetStatusString() (string, int) {
-    output := "Connected Clients: " + string(len(cl.peers)) + "\n"
-    output += "Download status: \n"
-    bitfield, lines := util.BitfieldToString(cl.PieceBitmap, 40)
-    output += bitfield + "\n"
-    return output, lines + 3
+	output := fmt.Sprintf("Known peers: %d\n", len(cl.peers))
+	output += "Download status: "
+	bitfield, lines := util.BitfieldToString(cl.PieceBitmap, 40)
+	output += bitfield + "\n"
+	return output, lines + 2
 }

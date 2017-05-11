@@ -3,9 +3,9 @@ package util
 import (
 	"fmt"
 	"math/rand"
+	"os"
 	"strings"
 	"time"
-    "os"
 )
 
 type color string
@@ -33,8 +33,6 @@ const (
 	Cyan      color = "\033[36m"
 	Reset     color = "\033[0m"
 )
-
-
 
 const chars = "abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789"
 
@@ -66,11 +64,12 @@ func EPrintf(format string, a ...interface{}) (n int, err error) {
 	return
 }
 
+// warning logging
 func WPrintf(format string, a ...interface{}) (n int, err error) {
-    if Debug <= Info {
-        ColorPrintf(Cyan, "[WARNING] "+ format, a...)
-    }
-    return
+	if Debug <= Info {
+		ColorPrintf(Yellow, "[WARNING] "+format, a...)
+	}
+	return
 }
 
 // info logging
@@ -93,7 +92,7 @@ func TPrintf(format string, a ...interface{}) (n int, err error) {
 //lock logging
 func LPrintf(format string, a ...interface{}) (n int, err error) {
 	if Debug <= Lock {
-		ColorPrintf(Yellow, format, a...)
+		ColorPrintf(Purple, format, a...)
 	}
 	return
 }
@@ -102,8 +101,8 @@ func LPrintf(format string, a ...interface{}) (n int, err error) {
 func ColorPrintf(c color, format string, a ...interface{}) (n int, err error) {
 	str := string(c) + format + string(Reset)
 	fmt.Printf(str, a...)
-    // fmt.Flush()
-    os.Stdout.Sync()
+	// fmt.Flush()
+	os.Stdout.Sync()
 	return
 }
 
@@ -161,7 +160,7 @@ func SplitEveryN(str string, n int) []string {
 }
 
 func GenerateRandStr(length int) string {
-    rand.Seed(time.Now().UnixNano())
+	rand.Seed(time.Now().UnixNano())
 	b := make([]byte, length)
 	for i := range b {
 		b[i] = chars[rand.Intn(len(chars))]
@@ -204,49 +203,48 @@ func BytesToBools(data []byte) []bool {
 	return output
 }
 
-func BitfieldToString(data []bool, width int) (string,  int) {
-    outputLines := len(data) / width
-    if (len(data) % width != 0) {
-        outputLines += 1
-    }
-    lines := make([]string, outputLines)
-    for i := 0; i < len(data); i++ {
-        val := " "
-        if data[i] {
-            val = "#"
-        }
-        lines[i/width] +=  val
-    }
-    if (len(data) % width != 0) {
-        lines[len(lines) - 1] += strings.Repeat(".", width - (len(data) % width))
-    }
-    output := "+" + strings.Repeat("-", width) + "+\n"
-    for i:= 0; i < outputLines; i++ {
-        output += "|"  + lines[i] + "|\n"
-    }
-    output += "+" + strings.Repeat("-", width) + "+"
-    return output, outputLines + 2
+func BitfieldToString(data []bool, width int) (string, int) {
+	sum := 0.0
+	piecePercent := float64(width) / float64(len(data))
+	result := "["
+
+	for i := 0; i < len(data); i++ {
+		if data[i] {
+			sum += piecePercent
+		}
+	}
+
+	for i := 0; i < int(sum); i++ {
+		result += "#"
+	}
+	for i := int(sum); i < width; i++ {
+		result += "-"
+	}
+	percent := sum * 100 / float64(width)
+	result += fmt.Sprintf("] %.2f percent", percent)
+
+	return result, 0 // number of newlines
 }
 
 func MoveCursorUp(numlines int) {
-    Printf("\033[1000D")
-    for i:=0;i<numlines;i++ {
-        Printf("\033[1A")
-    }
+	Printf("\033[1000D")
+	for i := 0; i < numlines; i++ {
+		Printf("\033[1A")
+	}
 }
 
 func ZeroCursor() {
-    // Printf("\033[0G")
-    Printf("\033[0;0H")
+	// Printf("\033[0G")
+	Printf("\033[0;0H")
 }
 
 func MoveCursorDown(numlines int) {
-    // Printf("\033[1000D")
-    for i:=0;i<numlines;i++ {
-        Printf("\033[1B")
-    }
+	// Printf("\033[1000D")
+	for i := 0; i < numlines; i++ {
+		Printf("\033[1B")
+	}
 }
 
 func ClearScreen() {
-    Printf("\033[0J")
+	Printf("\033[0J")
 }

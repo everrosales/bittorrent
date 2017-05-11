@@ -4,18 +4,51 @@ import (
 	"bytes"
 	"client"
 	"encoding/gob"
+	"fmt"
 	"fs"
+	"io"
 	"os"
 	"testing"
 	"tracker"
 	"util"
 )
 
+const ChunkSize = 64000
 const TestTorrentSmall = "torrent/puppy.torrent"
 const SeedFileSmall = "seed/puppy.jpg"
 
 func init() {
 	util.Debug = util.None
+}
+
+// Helpers
+func compareFiles(file1 string, file2 string) (bool, error) {
+	f1, err := os.Open(file1)
+	if err != nil {
+		return false, fmt.Errorf("error opening %s", file1)
+	}
+	f2, err := os.Open(file2)
+	if err != nil {
+		return false, fmt.Errorf("error opening %s", file2)
+	}
+
+	for {
+		b1 := make([]byte, ChunkSize)
+		size1, err1 := f1.Read(b1)
+
+		b2 := make([]byte, ChunkSize)
+		size2, err2 := f2.Read(b2)
+
+		if size1 != size2 {
+			return false, fmt.Errorf("sizes read don't match: %d != %d", size1, size2)
+		}
+		if !bytes.Equal(b1, b2) {
+			return false, fmt.Errorf("bytes don't equal")
+		}
+		if err1 == io.EOF && err2 == io.EOF {
+			return true, nil
+		}
+	}
 }
 
 func loadDataFromPersister(ps *btclient.Persister) btclient.BTClient {
@@ -32,17 +65,19 @@ func loadDataFromPersister(ps *btclient.Persister) btclient.BTClient {
 	return cl
 }
 
+// Tests
 func TestTwoClients(t *testing.T) {
 	util.StartTest("Testing integration with one seeder and one downloader...")
 	file := TestTorrentSmall
 	seed := SeedFileSmall
+	output := "test/puppy_download1.jpg"
 
 	seederPersister := btclient.MakePersister("test1")
 	downloaderPersister := btclient.MakePersister("test2")
 
 	tr := bttracker.StartBTTracker(file, 8000)
 	seeder := btclient.StartBTClient("localhost", 6666, file, seed, "", seederPersister)
-	downloader := btclient.StartBTClient("localhost", 6667, file, "", "puppy_download.jpg", downloaderPersister)
+	downloader := btclient.StartBTClient("localhost", 6667, file, "", output, downloaderPersister)
 
 	util.Wait(2000)
 
@@ -57,35 +92,38 @@ func TestTwoClients(t *testing.T) {
 	os.Remove(downloaderPersister.Path)
 
 	if len(res.Pieces) != len(metadata.PieceHashes) {
-		util.EPrintf("Client has %d pieces but expected %d pieces\n", len(res.Pieces), len(metadata.PieceHashes))
-		t.Fail()
-		return
+		t.Fatalf("Client has %d pieces but expected %d pieces\n", len(res.Pieces), len(metadata.PieceHashes))
 	}
 
 	util.TPrintf("piece bitmap %v\n", res.PieceBitmap)
 	for i, hash := range metadata.PieceHashes {
 		if res.Pieces[i].Hash() != hash {
-			util.EPrintf("Piece %d did not hash correctly\n%s != %s\n", i, res.Pieces[i].Hash(), hash)
-			t.Fail()
-			return
+			t.Fatalf("Piece %d did not hash correctly\n%s != %s\n", i, res.Pieces[i].Hash(), hash)
 		}
+	}
+
+	same, err := compareFiles(seed, output)
+	if err != nil || !same {
+		t.Fatalf("Seed file and downloaded file don't match: %s", err.Error())
 	}
 	util.EndTest()
 }
 
 func TestThreeClients(t *testing.T) {
 	util.StartTest("Testing integration with one seeder and one downloader...")
-	file := "puppy.jpg.torrent"
-	seed := "puppy.jpg"
+	file := TestTorrentSmall
+	seed := SeedFileSmall
+	output1 := "test/puppy_download2.jpg"
+	output2 := "test/puppy_download3.jpg"
 
 	seederPersister := btclient.MakePersister("test1")
 	downloaderPersister := btclient.MakePersister("test2")
 	downloaderPersister2 := btclient.MakePersister("test3")
 
 	tr := bttracker.StartBTTracker(file, 8000)
-	seeder := btclient.StartBTClient("localhost", 6668, file, seed, seederPersister)
-	downloader := btclient.StartBTClient("localhost", 6669, file, "", downloaderPersister)
-	downloader2 := btclient.StartBTClient("localhost", 6670, file, "", downloaderPersister2)
+	seeder := btclient.StartBTClient("localhost", 6668, file, seed, "", seederPersister)
+	downloader := btclient.StartBTClient("localhost", 6669, file, "", output1, downloaderPersister)
+	downloader2 := btclient.StartBTClient("localhost", 6670, file, "", output2, downloaderPersister2)
 
 	util.Wait(2000)
 
@@ -103,37 +141,36 @@ func TestThreeClients(t *testing.T) {
 	os.Remove(downloaderPersister.Path)
 	os.Remove(downloaderPersister2.Path)
 
-	// t.Fail()
-
 	if len(res.Pieces) != len(metadata.PieceHashes) {
-		util.EPrintf("Client1: has %d pieces but expected %d pieces\n", len(res.Pieces), len(metadata.PieceHashes))
-		t.Fail()
-		return
+		t.Fatalf("Client1: has %d pieces but expected %d pieces\n", len(res.Pieces), len(metadata.PieceHashes))
 	}
 
 	if len(res2.Pieces) != len(metadata.PieceHashes) {
-		util.EPrintf("Client2: has %d pieces but expected %d pieces\n", len(res.Pieces), len(metadata.PieceHashes))
-		t.Fail()
-		return
+		t.Fatalf("Client2: has %d pieces but expected %d pieces\n", len(res.Pieces), len(metadata.PieceHashes))
 	}
 
 	util.TPrintf("piece bitmap %v\n", res.PieceBitmap)
 	for i, hash := range metadata.PieceHashes {
 		if res.Pieces[i].Hash() != hash {
-			util.EPrintf("Client1: Piece %d did not hash correctly\n%s != %s\n", i, res.Pieces[i].Hash(), hash)
-			t.Fail()
-			return
+			t.Fatalf("Client1: Piece %d did not hash correctly\n%s != %s\n", i, res.Pieces[i].Hash(), hash)
 		}
 	}
 
 	util.TPrintf("piece bitmap %v\n", res2.PieceBitmap)
 	for i, hash := range metadata.PieceHashes {
 		if res2.Pieces[i].Hash() != hash {
-			util.EPrintf("Client2: Piece %d did not hash correctly\n%s != %s\n", i, res.Pieces[i].Hash(), hash)
-			t.Fail()
-			return
+			t.Fatalf("Client2: Piece %d did not hash correctly\n%s != %s\n", i, res.Pieces[i].Hash(), hash)
 		}
 	}
+	same, err := compareFiles(seed, output1)
+	if err != nil || !same {
+		t.Fatalf("Client1: Seed file and downloaded file don't match: %s", err.Error())
+	}
+	same, err = compareFiles(seed, output1)
+	if err != nil || !same {
+		t.Fatalf("Client2: Seed file and downloaded file don't match: %s", err.Error())
+	}
+
 	util.EndTest()
 }
 
