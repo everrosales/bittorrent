@@ -7,15 +7,23 @@ import (
 	"os"
 	"tracker"
 	"util"
+    "os/signal"
+    "syscall"
 )
 
+func cleanup(cl *btclient.BTClient) {
+    cl.Kill()
+    // fmt.Println("cleanup")
+}
+
 func main() {
+
 	// TODO: add utility for making a .torrent file
 	clientFlag := flag.Bool("client", false, "Start client for torrent")
 	trackerFlag := flag.Bool("tracker", false, "Start tracker for torrent")
 	fileFlag := flag.String("file", "", "Torrent (.torrent) file (required)")
 	seedFlag := flag.String("seed", "", "The file for the client to seed (client only)")
-	seedFlag := flag.String("output", "", "The path to save the downloaded file (client only)")
+	outputFlag := flag.String("output", "", "The path to save the downloaded file (client only)")
 	debugFlag := flag.String("debug", "None", "Debug level [None|Info|Trace|Lock]")
 	portFlag := flag.Int("port", 8000, "Port (default 8000)")
 	flag.Parse()
@@ -66,11 +74,22 @@ func main() {
 			panic(err)
 		}
 
-		cl := btclient.StartBTClient("localhost", *portFlag, *fileFlag, *seedFlag, btclient.MakePersister(tmpFile.Name()))
+        c := make(chan os.Signal, 2)
+        signal.Notify(c, os.Interrupt, syscall.SIGTERM)
+
+
+		cl := btclient.StartBTClient("localhost", *portFlag, *fileFlag, *seedFlag,  *outputFlag, btclient.MakePersister(tmpFile.Name()))
         // status, _ := cl.GetStatusString()
         // util.ZeroCursor()
         // util.ClearScreen()
         // util.Printf(status)
+        go func() {
+            <-c
+            cleanup(cl)
+            os.Remove(tmpFile.Name())
+            os.Exit(1)
+        }()
+
         for !cl.CheckShutdown() {
         //     util.ZeroCursor()
         //     status, _ = cl.GetStatusString()
@@ -78,7 +97,6 @@ func main() {
         //     // util.MoveCursorDown(lines)
         //     util.Wait(10)
         }
-		os.Remove(tmpFile.Name())
 		return
 	}
 
