@@ -82,14 +82,14 @@ func InitializePeer(addr *net.TCPAddr, infoHash string, peerId string, bitfieldL
 		// This happens if we are not the ones initializing the communication
 		data, err := ReadHandshake(conn)
         if err != nil {
-            util.EPrintf("%s\n", err)
+            util.WPrintf("%s\n", err)
             conn.Close()
             return nil
         }
 		handshake := DecodeHandshake(data)
 		// TODO: Process the handshake and drop connection if needed
 		if len(handshake.InfoHash) != 20 {
-			util.ColorPrintf(util.Purple, "CR: BAD handshake, closing the connection\n")
+			util.TPrintf("CR: BAD handshake, closing the connection\n")
 			// Badly formatted hsandshake, dont make the connection stick
 			conn.Close()
 			return nil
@@ -127,7 +127,7 @@ func InitializePeer(addr *net.TCPAddr, infoHash string, peerId string, bitfieldL
 
 func DecodeHandshake(data []byte) Handshake {
 	if len(data) < 1 {
-		util.EPrintf("Badly formatted data\n")
+		util.WPrintf("Badly formatted data\n")
 		return Handshake{}
 	}
 
@@ -137,11 +137,11 @@ func DecodeHandshake(data []byte) Handshake {
 	pstrLenDecodeBuf := bytes.NewReader(pstrbuf)
 	errBinary := binary.Read(pstrLenDecodeBuf, binary.BigEndian, &pstrLen)
 	if errBinary != nil {
-		util.EPrintf("labtcp DecodeHandshake: %s\n", errBinary)
+		util.WPrintf("labtcp DecodeHandshake: %s\n", errBinary)
 	}
 
 	if len(data) < (49 + int(pstrLen)) {
-		util.EPrintf("Badly formatted data\n")
+		util.WPrintf("Badly formatted data\n")
 		return Handshake{}
 	}
 
@@ -194,7 +194,7 @@ func DecodePeerMessage(data []byte, numPieces int) PeerMessage {
 	// First grab the length of the message sent
 	err := binary.Read(buf, binary.BigEndian, &msglength)
 	if err != nil {
-		util.EPrintf("peerprotocol DecodePeerMessage: %s\n", err)
+		util.WPrintf("peerprotocol DecodePeerMessage: %s\n", err)
 	}
 	// peerMessage.Length = int(length) // peerMessage.Length != length
 	if msglength < 1 {
@@ -206,7 +206,7 @@ func DecodePeerMessage(data []byte, numPieces int) PeerMessage {
 	// Now read the message type
 	err = binary.Read(buf, binary.BigEndian, &messageType)
 	if err != nil {
-		util.EPrintf("peerprotocol DecodePeerMessage: %s\n", err)
+		util.WPrintf("peerprotocol DecodePeerMessage: %s\n", err)
 	}
 	peerMessage.Type = MessageType(messageType)
 
@@ -284,7 +284,7 @@ func DecodePeerMessage(data []byte, numPieces int) PeerMessage {
 		peerMessage.Begin = int(begin)
 		peerMessage.Length = int(length)
 	default:
-		util.EPrintf("Unsupported message\n")
+		util.WPrintf("Unsupported message\n")
 		return PeerMessage{}
 	}
 
@@ -378,7 +378,7 @@ func EncodePeerMessage(msg PeerMessage) []byte {
 		checkAndPrintErr(err)
 		err = binary.Write(buf, binary.BigEndian, int32(msg.Length))
 	default:
-		util.EPrintf("Something went wrong\n")
+		util.WPrintf("Something went wrong\n")
 		return []byte{}
 	}
 	return buf.Bytes()
@@ -386,6 +386,6 @@ func EncodePeerMessage(msg PeerMessage) []byte {
 
 func checkAndPrintErr(err error) {
 	if err != nil {
-		util.EPrintf("peerprotocol: %s\n", err)
+		util.WPrintf("peerprotocol: %s\n", err)
 	}
 }

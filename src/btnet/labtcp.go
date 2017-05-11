@@ -12,19 +12,19 @@ func StartTCPServer(addr string, handler func(*net.TCPConn)) {
 	util.TPrintf("Starting the TCP Server...\n")
 	tcpAddr, err := net.ResolveTCPAddr("tcp", addr)
 	if err != nil {
-		util.EPrintf("Labtcp StartTCPServer: %s", err)
+		util.WPrintf("Labtcp StartTCPServer: %s", err)
 	}
 	ln, err := net.ListenTCP("tcp", tcpAddr)
 	if err != nil {
 		// complain about things dying
-		util.EPrintf("labtcp StartTCPServer: %s\n", err)
+		util.WPrintf("labtcp StartTCPServer: %s\n", err)
 	}
 	go func(ln *net.TCPListener) {
 		for {
 			conn, err := ln.AcceptTCP()
 			if err != nil {
 				// complain about a thing
-				util.EPrintf("labtcp StartTCPServer: %s\n", err)
+				util.WPrintf("labtcp StartTCPServer: %s\n", err)
 			}
 			go handler(conn)
 		}
@@ -32,16 +32,16 @@ func StartTCPServer(addr string, handler func(*net.TCPConn)) {
 }
 
 func DoDial(addr *net.TCPAddr, data []byte) (*net.TCPConn, error) {
-	util.IPrintf("Dialing: %v\n", addr.String())
+	util.TPrintf("Dialing: %v\n", addr.String())
 	conn, err := net.DialTCP("tcp", nil, addr)
 	if err != nil {
 		// Cry
-		util.EPrintf("labtcp DoDial: %s\n", err)
+		util.WPrintf("labtcp DoDial: %s\n", err)
 		return conn, err
 	}
 	_, err = conn.Write(data)
 	if err != nil {
-		util.EPrintf("labtcp DoDail: %s\n", err)
+		util.WPrintf("labtcp DoDail: %s\n", err)
 	}
 	return conn, err
 	// return ReadMessage(conn)
@@ -103,7 +103,7 @@ func ReadMessage(conn *net.TCPConn) ([]byte, error) {
 func IsConnectionClosed(conn *net.TCPConn) bool {
 	one := []byte{}
 	if data, err := conn.Read(one); err == io.EOF {
-		util.ColorPrintf(util.Purple, "Closing the connection in labtcp/IsConnectionClosed\n")
+		util.TPrintf("Closing the connection in labtcp/IsConnectionClosed\n")
 		conn.Close()
 		// conn = nil
 		return true

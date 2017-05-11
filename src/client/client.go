@@ -75,7 +75,7 @@ func StartBTClient(ip string, port int, metadataPath string, seedPath string, ou
 
 	cl.loadPieces(persister.ReadState())
 
-	util.IPrintf("\nClient for %s listening on port %d\n", metadataPath, port)
+	util.TPrintf("\nClient for %s listening on port %d\n", metadataPath, port)
 
 	if seedPath != "" {
 		cl.Seed(seedPath)

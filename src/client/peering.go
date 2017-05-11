@@ -55,7 +55,7 @@ func (cl *BTClient) requestBlock(piece int, block int) {
 	for addr, peer := range cl.peers {
 		util.TPrintf("%s: peer bitfield: %v\n", cl.port, peer.Bitfield)
 		if peer.Bitfield[piece] && !peer.Status.PeerChoking {
-			util.Printf("%s: requesting piece %d block %d from peer %s\n", cl.port, piece, block, addr)
+			util.TPrintf("%s: requesting piece %d block %d from peer %s\n", cl.port, piece, block, addr)
 			begin := block * fs.BlockSize
 			cl.sendRequestMessage(peer, piece, begin, fs.BlockSize)
 		}
@@ -217,7 +217,7 @@ func (cl *BTClient) SetupPeerConnections(addr *net.TCPAddr, conn *net.TCPConn) {
 			data := btnet.EncodePeerMessage(msg)
 			// if (!msg.KeepAlive) {
 
-			util.ColorPrintf(util.Cyan, "Sending encoded message from: %v, to: %v, type: %v\n",
+			util.TPrintf("Sending encoded message from: %v, to: %v, type: %v\n",
 			peer.Conn.LocalAddr().String(), peer.Conn.RemoteAddr().String(), msg.Type)
 			// }
 			// We dont need a lock if only this thread is sending out TCP messages
@@ -231,15 +231,15 @@ func (cl *BTClient) SetupPeerConnections(addr *net.TCPAddr, conn *net.TCPConn) {
 			if err != nil {
 				// Connection is probably closed
 				// TODO: Not sure if this is the right way of checking this
-				util.EPrintf("err: %v\n", err)
+				util.WPrintf("err: %v\n", err)
 				if peer.Conn.RemoteAddr() != nil {
-					util.ColorPrintf(util.Purple, "Closing the connection in peering/SetupPeerConnections\n")
+					util.TPrintf("Closing the connection in peering/SetupPeerConnections\n")
 					peer.Conn.Close()
 				}
 				// cl.mu.Unlock()
 				return
 			}
-			util.Printf("Sent message type: %v, to: %s\n", msg.Type, peer.Conn.RemoteAddr().String())
+			util.TPrintf("Sent message type: %v, to: %s\n", msg.Type, peer.Conn.RemoteAddr().String())
 		}
 	}()
 
@@ -251,11 +251,11 @@ func (cl *BTClient) SetupPeerConnections(addr *net.TCPAddr, conn *net.TCPConn) {
 				// Do nothing, this is good
 			case <-time.After(peerTimeout):
 				if peer.Conn.RemoteAddr() != nil {
-					util.ColorPrintf(util.Purple, "Closing the connection in peering keepalive loop\n")
+					util.TPrintf("Closing the connection in peering keepalive loop\n")
 					peer.Conn.Close()
 				}
 				cl.lock("peering/keepalivetimeout")
-				util.EPrintf("KeepAliveTIMEOUT EXCEEDED port: %v\n", cl.port)
+				util.WPrintf("KeepAliveTIMEOUT EXCEEDED port: %v\n", cl.port)
 				delete(cl.peers, peer.Addr.String())
 				cl.unlock("peering/keepalivetimeout")
 				return
@@ -266,9 +266,9 @@ func (cl *BTClient) SetupPeerConnections(addr *net.TCPAddr, conn *net.TCPConn) {
 	// Start another go routine to read stuff from that channel
 	go func() {
 		if peer.Conn.RemoteAddr() == nil {
-			util.Printf("Connection Closed!\n")
+			util.TPrintf("Connection Closed!\n")
 		} else {
-			util.Printf("Connection Alive!\n")
+			util.TPrintf("Connection Alive!\n")
 		}
 		cl.messageHandler(&peer.Conn)
 	}()
@@ -282,7 +282,7 @@ func (cl *BTClient) SendPeerMessage(addr *net.TCPAddr, message btnet.PeerMessage
 		cl.SetupPeerConnections(addr, nil)
 		peer, ok = cl.peers[addr.String()]
         if !ok {
-            util.EPrintf("Failed to establish a connection\n")
+            util.WPrintf("Failed to establish a connection\n")
             return
         }
         peer.MsgQueue <- message
@@ -319,12 +319,12 @@ func (cl *BTClient) messageHandler(conn *net.TCPConn) {
 		// Process the message
 		buf, err := btnet.ReadMessage(conn)
 		if err != nil {
-			util.EPrintf("%s\n", err)
+			util.WPrintf("%s\n", err)
             conn.Close()
 			return
 		}
 		peerMessage := btnet.DecodePeerMessage(buf, len(cl.torrentMeta.PieceHashes))
-		util.ColorPrintf(util.Cyan, "Received PeerMessage, type: %v, from: %s\n", peerMessage.Type, conn.RemoteAddr().String())
+		util.TPrintf("Received PeerMessage, type: %v, from: %s\n", peerMessage.Type, conn.RemoteAddr().String())
 		// Massive switch case that would handle incoming messages depending on message type
 
 		// peerMessage := btnet.PeerMessage{}  // empty for now, TODO
