@@ -115,6 +115,15 @@ func (cl *BTClient) CheckShutdown() bool {
 	return false
 }
 
+func (cl *BTClient) CheckDone() bool {
+	cl.lock("checking done")
+	defer cl.unlock("checking done")
+	if allTrue(cl.PieceBitmap) {
+		return true
+	}
+	return false
+}
+
 func (cl *BTClient) SaveOutput() {
 	cl.lock("main/saveoutput")
 	pieces := make([]fs.Piece, len(cl.Pieces))
