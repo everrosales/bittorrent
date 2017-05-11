@@ -14,6 +14,8 @@ You'll also need to install http://github.com/zeebo/bencode/. In the `src` folde
 ## Usage
 To run either the tracker or client, go in to `src/main` and run `go run main.go`. Run the tracker with flag `-tracker` and run the client with flag `-client`. Specify the `.torrent` file you want to use with `-torrent=<NAME>`. Other flags include `-debug` and `-port`. 
 
+You can also generate `.torrent` files using the main utility. Run a command like `go run main.go -generate -torrent=out.torrent -file=<filename> -url=<tracker url>`.
+
 ## Development
 * `src/client` - code for the client
 * `src/tracker` - code for the tracker
