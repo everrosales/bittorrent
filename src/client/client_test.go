@@ -54,7 +54,10 @@ func TestClientTCPServerNice(t *testing.T) {
 	data := btnet.EncodeHandshake(handshake)
 	// Sending KeepAlive
 	// util.TPrintf("Encoded data: %v\n", data)
-	connection := btnet.DoDial(tcpAddr, data)
+	connection, err := btnet.DoDial(tcpAddr, data)
+	if err != nil {
+		t.Fatalf("DoDial error: %s", err.Error())
+	}
 	util.Wait(100)
 	_, ok := cl.getPeer(connection.LocalAddr().String())
 	if !ok {
@@ -117,7 +120,10 @@ func TestClientTCPServer(t *testing.T) {
 
 	// Send badly formatted message
 	baddata := []byte{0xde, 0xad, 0xbe, 0xef}
-	connection := btnet.DoDial(tcpAddr, baddata)
+	connection, err := btnet.DoDial(tcpAddr, baddata)
+	if err != nil {
+		t.Fatalf("DoDial error: %s", err.Error())
+	}
 	connection.SetDeadline(time.Now().Add(500 * time.Millisecond))
 	util.Wait(1000)
 	if cl.getNumPeers() > 0 {
@@ -137,7 +143,10 @@ func TestClientTCPServer(t *testing.T) {
 	data := btnet.EncodeHandshake(handshake)
 	// Sending KeepAlive
 	// util.TPrintf("Encoded data: %v\n", data)
-	connection = btnet.DoDial(tcpAddr, data)
+	connection, err = btnet.DoDial(tcpAddr, data)
+	if err != nil {
+		t.Fatalf("DoDial error: %s", err.Error())
+	}
 	util.Wait(100)
 	_, ok := cl.getPeer(connection.LocalAddr().String())
 	if !ok {

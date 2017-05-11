@@ -4,51 +4,18 @@ import (
 	"bytes"
 	"client"
 	"encoding/gob"
-	"fmt"
 	"fs"
-	"io"
 	"os"
 	"testing"
 	"tracker"
 	"util"
 )
 
-const ChunkSize = 64000
 const TestTorrentSmall = "torrent/puppy.torrent"
 const SeedFileSmall = "seed/puppy.jpg"
 
 func init() {
 	util.Debug = util.None
-}
-
-// Helpers
-func compareFiles(file1 string, file2 string) (bool, error) {
-	f1, err := os.Open(file1)
-	if err != nil {
-		return false, fmt.Errorf("error opening %s", file1)
-	}
-	f2, err := os.Open(file2)
-	if err != nil {
-		return false, fmt.Errorf("error opening %s", file2)
-	}
-
-	for {
-		b1 := make([]byte, ChunkSize)
-		size1, err1 := f1.Read(b1)
-
-		b2 := make([]byte, ChunkSize)
-		size2, err2 := f2.Read(b2)
-
-		if size1 != size2 {
-			return false, fmt.Errorf("sizes read don't match: %d != %d", size1, size2)
-		}
-		if !bytes.Equal(b1, b2) {
-			return false, fmt.Errorf("bytes don't equal")
-		}
-		if err1 == io.EOF && err2 == io.EOF {
-			return true, nil
-		}
-	}
 }
 
 func loadDataFromPersister(ps *btclient.Persister) btclient.BTClient {
@@ -102,7 +69,7 @@ func TestTwoClients(t *testing.T) {
 		}
 	}
 
-	same, err := compareFiles(seed, output)
+	same, err := util.CompareFiles(seed, output)
 	if err != nil || !same {
 		t.Fatalf("Seed file and downloaded file don't match: %s", err.Error())
 	}
@@ -162,11 +129,11 @@ func TestThreeClients(t *testing.T) {
 			t.Fatalf("Client2: Piece %d did not hash correctly\n%s != %s\n", i, res.Pieces[i].Hash(), hash)
 		}
 	}
-	same, err := compareFiles(seed, output1)
+	same, err := util.CompareFiles(seed, output1)
 	if err != nil || !same {
 		t.Fatalf("Client1: Seed file and downloaded file don't match: %s", err.Error())
 	}
-	same, err = compareFiles(seed, output1)
+	same, err = util.CompareFiles(seed, output1)
 	if err != nil || !same {
 		t.Fatalf("Client2: Seed file and downloaded file don't match: %s", err.Error())
 	}
@@ -177,6 +144,7 @@ func TestThreeClients(t *testing.T) {
 // TODO: test with other files/piece sizes/numbers of pieces
 // TODO: test with one seeder, multiple downloaders
 // TODO: test with multiple seeders, multiple downloaders
+// TODO: test with 1 stopped peer
 // TODO: test with stopped and restarted seeder
 // TODO: test with stopped and restarted downloader
 // TODO: test with stopped and restarted tracker

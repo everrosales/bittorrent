@@ -33,7 +33,10 @@ func TestTCP(t *testing.T) {
 	// Send an interested msg
 	data := []byte{0x00, 0x00, 0x00, 0x01, 0x02}
 
-	conn := DoDial(tcpAddr, data)
+	conn, err := DoDial(tcpAddr, data)
+	if err != nil {
+		t.Fatalf("DoDial error: %s", err.Error())
+	}
 	util.TPrintf("data: %v\n", data)
 	actual, err := ReadMessage(conn)
 	expected := []byte{0x00, 0x00, 0x00, 0x05, 0x04, 0x00, 0x00, 0x80, 0x00}

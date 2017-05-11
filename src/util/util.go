@@ -1,7 +1,9 @@
 package util
 
 import (
+	"bytes"
 	"fmt"
+	"io"
 	"math/rand"
 	"os"
 	"strings"
@@ -35,7 +37,9 @@ const (
 )
 
 const chars = "abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789"
+const ChunkSize = 64000
 
+// utility that prints a test name
 func StartTest(desc string) {
 	if Debug != None {
 		desc = desc + "\n"
@@ -43,6 +47,7 @@ func StartTest(desc string) {
 	ColorPrintf(Underline, desc)
 }
 
+// utility that prints that a test passed
 func EndTest() {
 	ColorPrintf(Green, "  pass\n")
 }
@@ -53,6 +58,7 @@ func Printf(format string, a ...interface{}) (n int, err error) {
 	return
 }
 
+// print a line
 func Printfln(format string, a ...interface{}) (n int, err error) {
 	ColorPrintf(Default, format+"\n", a...)
 	return
@@ -106,10 +112,12 @@ func ColorPrintf(c color, format string, a ...interface{}) (n int, err error) {
 	return
 }
 
+// wait for milliseconds
 func Wait(milliseconds int) {
 	<-time.After(time.Millisecond * time.Duration(milliseconds))
 }
 
+// check if every element in a byte array is equal
 func ByteArrayEquals(first []byte, second []byte) bool {
 	if first == nil && second == nil {
 		return true
@@ -128,6 +136,7 @@ func ByteArrayEquals(first []byte, second []byte) bool {
 	return true
 }
 
+// check if every element in two bool arrays is equal
 func BoolArrayEquals(first []bool, second []bool) bool {
 	if first == nil && second == nil {
 		return true
@@ -146,19 +155,22 @@ func BoolArrayEquals(first []bool, second []bool) bool {
 	return true
 }
 
+// split a string into an array of strings of length n, where the last string
+// might be truncated
 func SplitEveryN(str string, n int) []string {
-    numSlices := len(str) / n
-    if (len(str) % n != 0) {
-        numSlices += 1
-    }
+	numSlices := len(str) / n
+	if len(str)%n != 0 {
+		numSlices += 1
+	}
 	slices := make([]string, numSlices)
 	// lastIndex := 0
-    for i := 0; i < len(str); i++ {
-        slices[i/n] += string(str[i])
-    }
+	for i := 0; i < len(str); i++ {
+		slices[i/n] += string(str[i])
+	}
 	return slices
 }
 
+// generate a random string of alphanumeric chars (used for peerIds)
 func GenerateRandStr(length int) string {
 	rand.Seed(time.Now().UnixNano())
 	b := make([]byte, length)
@@ -168,6 +180,7 @@ func GenerateRandStr(length int) string {
 	return string(b)
 }
 
+// convert bool array to byte array
 func BoolsToBytes(data []bool) []byte {
 	if len(data)%8 != 0 {
 		// we need to pad the message with zeros
@@ -191,26 +204,29 @@ func BoolsToBytes(data []bool) []byte {
 	return output
 }
 
+// convert byte array to bool array
 func BytesToBools(data []byte) []bool {
 	output := make([]bool, len(data)*8)
 	for i := 0; i < len(data)*8; i++ {
 		mask := (byte(0x80) >> uint(i%8))
 		if (data[i/8] & mask) > 0 {
-			output[i] = true
+			output[i] = true // make sets false bits by default
 		}
-		// We dont have to set the false bits because thats done for us by the make operation
 	}
 	return output
 }
 
+// print bitfield as progress bar
 func BitfieldToString(data []bool, width int) (string, int) {
 	sum := 0.0
+	count := 0
 	piecePercent := float64(width) / float64(len(data))
 	result := "["
 
 	for i := 0; i < len(data); i++ {
 		if data[i] {
 			sum += piecePercent
+			count += 1
 		}
 	}
 
@@ -221,11 +237,12 @@ func BitfieldToString(data []bool, width int) (string, int) {
 		result += "-"
 	}
 	percent := sum * 100 / float64(width)
-	result += fmt.Sprintf("] %.2f percent", percent)
+	result += fmt.Sprintf("] %d/%d pieces, %.2f percent", count, len(data), percent)
 
 	return result, 0 // number of newlines
 }
 
+// Moves terminal cursor up numLines
 func MoveCursorUp(numlines int) {
 	Printf("\033[1000D")
 	for i := 0; i < numlines; i++ {
@@ -233,18 +250,49 @@ func MoveCursorUp(numlines int) {
 	}
 }
 
+// Puts cursor in top left corner of terminal
 func ZeroCursor() {
-	// Printf("\033[0G")
 	Printf("\033[0;0H")
 }
 
+// Moves terminal cursor down numLines
 func MoveCursorDown(numlines int) {
-	// Printf("\033[1000D")
 	for i := 0; i < numlines; i++ {
 		Printf("\033[1B")
 	}
 }
 
+// Clears terminal screen of all text
 func ClearScreen() {
 	Printf("\033[0J")
+}
+
+// Helpers
+func CompareFiles(file1 string, file2 string) (bool, error) {
+	f1, err := os.Open(file1)
+	if err != nil {
+		return false, fmt.Errorf("error opening %s", file1)
+	}
+	f2, err := os.Open(file2)
+	if err != nil {
+		return false, fmt.Errorf("error opening %s", file2)
+	}
+
+	for {
+		b1 := make([]byte, ChunkSize)
+		size1, err1 := f1.Read(b1)
+
+		b2 := make([]byte, ChunkSize)
+		size2, err2 := f2.Read(b2)
+
+		if size1 != size2 {
+			return false, fmt.Errorf("sizes read don't match: %d != %d", size1, size2)
+		}
+		if !bytes.Equal(b1, b2) {
+			return false, fmt.Errorf("bytes don't equal")
+		}
+		if err1 == io.EOF && err2 == io.EOF {
+			return true, nil
+		}
+	}
 }
