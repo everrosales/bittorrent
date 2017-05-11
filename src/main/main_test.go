@@ -136,3 +136,11 @@ func TestThreeClients(t *testing.T) {
 	}
 	util.EndTest()
 }
+
+// TODO: test with other files/piece sizes/numbers of pieces
+// TODO: test with one seeder, multiple downloaders
+// TODO: test with multiple seeders, multiple downloaders
+// TODO: test with stopped and restarted seeder
+// TODO: test with stopped and restarted downloader
+// TODO: test with stopped and restarted tracker
+// TODO: test for seeding and downloading in parallel (how?)
