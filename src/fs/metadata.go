@@ -3,9 +3,7 @@ package fs
 // For reading torrent metadata files
 
 import (
-	"bufio"
 	"crypto/sha1"
-	//"encoding/base64"
 	"io/ioutil"
 	"math"
 	"os"
@@ -148,26 +146,21 @@ func GetMetadata(path string, trackerUrl string, fileName string, numPieces int)
 	fileInfo := FileData{fileSize, files}
 
 	if fileSize < int64(numPieces) {
-		panic("Too many pieces")
+		panic("Too many pieces, not enough bytes in input file")
 	}
 
 	pieceSize := int(math.Ceil(float64(fileSize) / float64(numPieces)))
 
-	pieces := []string{}
+	pieces := SplitIntoPieces(path, pieceSize)
+	if len(pieces) != numPieces {
+		panic("Piece sizes don't match up")
+	}
+	util.Printf("Pieces: %v\n", pieces)
+	pieceHashes := make([]string, numPieces)
 
-	reader := bufio.NewReader(f)
-	buffer := make([]byte, pieceSize)
-
-	for i := 0; i < numPieces; i++ {
-		// read file chunk and hash it
-		readSize, err := reader.Read(buffer)
-		if err != nil {
-			panic("Error reading file")
-		}
-		sha := sha1.Sum(buffer)
-		pieces = append(pieces, string(sha[:readSize]))
-
+	for _, p := range pieces {
+		pieceHashes = append(pieceHashes, p.Hash())
 	}
 
-	return Metadata{trackerUrl, fileName, int64(numPieces), pieces, []FileData{fileInfo}}
+	return Metadata{trackerUrl, fileName, int64(numPieces), pieceHashes, []FileData{fileInfo}}
 }

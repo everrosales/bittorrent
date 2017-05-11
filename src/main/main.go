@@ -3,28 +3,36 @@ package main
 import (
 	"client"
 	"flag"
+	"fs"
 	"io/ioutil"
 	"os"
+	"os/signal"
+	"syscall"
 	"tracker"
 	"util"
-    "os/signal"
-    "syscall"
 )
 
 func cleanup(cl *btclient.BTClient) {
-    cl.Kill()
-    // fmt.Println("cleanup")
+	cl.Kill()
+	// fmt.Println("cleanup")
+}
+
+func generate(input string, output string, url string, name string, pieces int) {
+	metadata := fs.GetMetadata(input, url, name, pieces)
+	fs.Write(output, metadata)
 }
 
 func main() {
-
-	// TODO: add utility for making a .torrent file
 	clientFlag := flag.Bool("client", false, "Start client for torrent")
 	trackerFlag := flag.Bool("tracker", false, "Start tracker for torrent")
-	fileFlag := flag.String("file", "", "Torrent (.torrent) file (required)")
-	seedFlag := flag.String("seed", "", "The file for the client to seed (client only)")
-	outputFlag := flag.String("output", "", "The path to save the downloaded file (client only)")
+	generateFlag := flag.Bool("generate", false, "Generate torrent file")
+	torrentFlag := flag.String("torrent", "", "Torrent (.torrent) file (required)")
+	seedFlag := flag.String("seed", "", "The file for the client to seed (-client only)")
+	ipFlag := flag.String("ip", "localhost", "Client's IP address (default 'localhost')")
+	fileFlag := flag.String("file", "", "The path to read from or write to (-client and -generate only)")
 	debugFlag := flag.String("debug", "None", "Debug level [None|Info|Trace|Lock]")
+	urlFlag := flag.String("url", "", "URL of tracker (-generate only)")
+	piecesFlag := flag.Int("pieces", 0, "Number of pieces to split file into (-generate only)")
 	portFlag := flag.Int("port", 8000, "Port (default 8000)")
 	flag.Parse()
 
@@ -43,19 +51,34 @@ func main() {
 	}
 
 	// check for file flag, since it's required
-	if *fileFlag == "" {
-		util.EPrintf("Missing file flag.\n")
+	if *torrentFlag == "" {
+		util.EPrintf("Missing torrent file flag (-torrent)\n")
 		return
 	}
 
 	// check for valid port
 	if *portFlag < 1 || *portFlag > 65535 {
-		util.EPrintf("Invalid port number.\n")
+		util.EPrintf("Invalid port number\n")
 		return
 	}
 
 	// start client or tracker
-	if *clientFlag == *trackerFlag {
+	if *generateFlag {
+		if *fileFlag == "" {
+			util.EPrintf("Need to specify what file you're trying to torrent with -file\n")
+			return
+		}
+		if *urlFlag == "" {
+			util.EPrintf("Need to specify URL of tracker with -url\n")
+			return
+		}
+		if *piecesFlag <= 0 {
+			util.EPrintf("Missing -pieces flag (needs to be positive integer)\n")
+			return
+		}
+		util.Printf("Generating torrent for file %s and tracker url %s with %d pieces...\nSaving to %s\n", *fileFlag, *urlFlag, *piecesFlag, *torrentFlag)
+		generate(*fileFlag, *torrentFlag, *urlFlag, *fileFlag, *piecesFlag)
+	} else if *clientFlag == *trackerFlag {
 		util.EPrintf("Select either client or tracker.\n")
 		return
 	} else if *trackerFlag {
@@ -63,7 +86,7 @@ func main() {
 			util.EPrintf("Trackers cannot seed files.\n")
 			return
 		}
-		tr := bttracker.StartBTTracker(*fileFlag, *portFlag)
+		tr := bttracker.StartBTTracker(*torrentFlag, *portFlag)
 		for !tr.CheckShutdown() {
 		}
 		return
@@ -74,29 +97,28 @@ func main() {
 			panic(err)
 		}
 
-        c := make(chan os.Signal, 2)
-        signal.Notify(c, os.Interrupt, syscall.SIGTERM)
+		c := make(chan os.Signal, 2)
+		signal.Notify(c, os.Interrupt, syscall.SIGTERM)
 
+		cl := btclient.StartBTClient(*ipFlag, *portFlag, *torrentFlag, *seedFlag, *fileFlag, btclient.MakePersister(tmpFile.Name()))
+		// status, _ := cl.GetStatusString()
+		// util.ZeroCursor()
+		// util.ClearScreen()
+		// util.Printf(status)
+		go func() {
+			<-c
+			cleanup(cl)
+			os.Remove(tmpFile.Name())
+			os.Exit(1)
+		}()
 
-		cl := btclient.StartBTClient("localhost", *portFlag, *fileFlag, *seedFlag,  *outputFlag, btclient.MakePersister(tmpFile.Name()))
-        // status, _ := cl.GetStatusString()
-        // util.ZeroCursor()
-        // util.ClearScreen()
-        // util.Printf(status)
-        go func() {
-            <-c
-            cleanup(cl)
-            os.Remove(tmpFile.Name())
-            os.Exit(1)
-        }()
-
-        for !cl.CheckShutdown() {
-        //     util.ZeroCursor()
-        //     status, _ = cl.GetStatusString()
-        //     util.Printf(status)
-        //     // util.MoveCursorDown(lines)
-        //     util.Wait(10)
-        }
+		for !cl.CheckShutdown() {
+			//     util.ZeroCursor()
+			//     status, _ = cl.GetStatusString()
+			//     util.Printf(status)
+			//     // util.MoveCursorDown(lines)
+			//     util.Wait(10)
+		}
 		return
 	}
 
