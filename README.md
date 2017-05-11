@@ -32,6 +32,7 @@ Run tests with `go test` in the following directories:
 * `src/client`
 * `src/fs`
 * `src/tracker`
+* `src/util`
 
 You can also run integration tests in `main` by running the command `go test main_test.go`.
 
