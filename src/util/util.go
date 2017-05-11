@@ -5,9 +5,11 @@ import (
 	"math/rand"
 	"strings"
 	"time"
+    "os"
 )
 
 type color string
+type ansiControl string
 type debugLevel int
 
 // global var set in main for debug level
@@ -31,6 +33,8 @@ const (
 	Cyan      color = "\033[36m"
 	Reset     color = "\033[0m"
 )
+
+
 
 const chars = "abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789"
 
@@ -91,6 +95,8 @@ func LPrintf(format string, a ...interface{}) (n int, err error) {
 func ColorPrintf(c color, format string, a ...interface{}) (n int, err error) {
 	str := string(c) + format + string(Reset)
 	fmt.Printf(str, a...)
+    // fmt.Flush()
+    os.Stdout.Sync()
 	return
 }
 
@@ -149,6 +155,7 @@ func SplitEveryN(str string, n int) []string {
 }
 
 func GenerateRandStr(length int) string {
+    rand.Seed(time.Now().UnixNano())
 	b := make([]byte, length)
 	for i := range b {
 		b[i] = chars[rand.Intn(len(chars))]
@@ -189,4 +196,51 @@ func BytesToBools(data []byte) []bool {
 		// We dont have to set the false bits because thats done for us by the make operation
 	}
 	return output
+}
+
+func BitfieldToString(data []bool, width int) (string,  int) {
+    outputLines := len(data) / width
+    if (len(data) % width != 0) {
+        outputLines += 1
+    }
+    lines := make([]string, outputLines)
+    for i := 0; i < len(data); i++ {
+        val := " "
+        if data[i] {
+            val = "#"
+        }
+        lines[i/width] +=  val
+    }
+    if (len(data) % width != 0) {
+        lines[len(lines) - 1] += strings.Repeat(".", width - (len(data) % width))
+    }
+    output := "+" + strings.Repeat("-", width) + "+\n"
+    for i:= 0; i < outputLines; i++ {
+        output += "|"  + lines[i] + "|\n"
+    }
+    output += "+" + strings.Repeat("-", width) + "+"
+    return output, outputLines + 2
+}
+
+func MoveCursorUp(numlines int) {
+    Printf("\033[1000D")
+    for i:=0;i<numlines;i++ {
+        Printf("\033[1A")
+    }
+}
+
+func ZeroCursor() {
+    // Printf("\033[0G")
+    Printf("\033[2;0H")
+}
+
+func MoveCursorDown(numlines int) {
+    // Printf("\033[1000D")
+    for i:=0;i<numlines;i++ {
+        Printf("\033[1B")
+    }
+}
+
+func ClearScreen() {
+    Printf("\033[0J")
 }

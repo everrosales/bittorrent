@@ -64,7 +64,7 @@ func TestClientTCPServerNice(t *testing.T) {
 
 	returnedData, err := btnet.ReadMessage(connection)
 	decodedMsg := btnet.DecodePeerMessage(returnedData, len(cl.torrentMeta.PieceHashes))
-	// util.TPrintf("msg: %v", decodedMsg)
+	// util.TPrintf("msg: %v\n", decodedMsg)
 	if err != nil || decodedMsg.Type != 5 {
 		util.EPrintf("Did not recieve bitfield message\n%v\n", decodedMsg)
 		t.Fail()

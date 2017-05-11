@@ -107,9 +107,14 @@ func InitializePeer(addr *net.TCPAddr, infoHash string, peerId string, bitfieldL
 		data := EncodeHandshake(handshake)
 		// Sending data
         util.TPrintf("Sending Handshake\n")
-		peer.Conn = *DoDial(addr, data)
 
-		message := PeerMessage{
+		conn, err := DoDial(addr, data)
+        if err != nil {
+            return nil
+        }
+        peer.Conn = *conn
+
+        message := PeerMessage{
 			Type:     Bitfield,
 			Bitfield: pieceBitmap}
 		util.TPrintf("Enqueuing bitfield message %v\n", pieceBitmap)
@@ -122,7 +127,7 @@ func InitializePeer(addr *net.TCPAddr, infoHash string, peerId string, bitfieldL
 
 func DecodeHandshake(data []byte) Handshake {
 	if len(data) < 1 {
-		util.EPrintf("Badly formatted data")
+		util.EPrintf("Badly formatted data\n")
 		return Handshake{}
 	}
 
@@ -234,7 +239,7 @@ func DecodePeerMessage(data []byte, numPieces int) PeerMessage {
 		peerMessage.Index = index
 		return peerMessage
 	case Bitfield:
-		util.TPrintf("Decoding bitfield message")
+		util.TPrintf("Decoding bitfield message\n")
 		bitfield := make([]byte, (msglength - 1))
 		err = binary.Read(buf, binary.BigEndian, &bitfield)
 		checkAndPrintErr(err)
@@ -373,7 +378,7 @@ func EncodePeerMessage(msg PeerMessage) []byte {
 		checkAndPrintErr(err)
 		err = binary.Write(buf, binary.BigEndian, int32(msg.Length))
 	default:
-		util.EPrintf("Something went wrong")
+		util.EPrintf("Something went wrong\n")
 		return []byte{}
 	}
 	return buf.Bytes()

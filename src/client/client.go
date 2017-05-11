@@ -127,3 +127,11 @@ func (cl *BTClient) main() {
 		util.Wait(1000)
 	}
 }
+
+func (cl *BTClient) GetStatusString() (string, int) {
+    output := "Connected Clients: " + string(len(cl.peers)) + "\n"
+    output += "Download status: \n"
+    bitfield, lines := util.BitfieldToString(cl.PieceBitmap, 40)
+    output += bitfield + "\n"
+    return output, lines + 3
+}

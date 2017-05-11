@@ -66,8 +66,17 @@ func main() {
 		}
 
 		cl := btclient.StartBTClient("localhost", *portFlag, *fileFlag, *seedFlag, btclient.MakePersister(tmpFile.Name()))
-		for !cl.CheckShutdown() {
-		}
+        // status, _ := cl.GetStatusString()
+        // util.ZeroCursor()
+        // util.ClearScreen()
+        // util.Printf(status)
+        for !cl.CheckShutdown() {
+        //     util.ZeroCursor()
+        //     status, _ = cl.GetStatusString()
+        //     util.Printf(status)
+        //     // util.MoveCursorDown(lines)
+        //     util.Wait(10)
+        }
 		os.Remove(tmpFile.Name())
 		return
 	}

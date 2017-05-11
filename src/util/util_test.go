@@ -36,3 +36,22 @@ func TestBytesToBools(t *testing.T) {
   }
   EndTest()
 }
+
+func TestBitfieldToString(t *testing.T) {
+    StartTest("Testing BitfieldToString...")
+    bitfield := []bool{false, true, false,
+                       true, false, true,
+                       false, true, true }
+    output, numlines := BitfieldToString(bitfield, 3)
+
+
+    Printf("%s\n", output)
+    MoveCursorUp(numlines)
+    Printf("%s\n", output)
+    Printf("%d\n", numlines)
+
+    Printf("xxxxxxx\n")
+    MoveCursorUp(1)
+    Printf("yyyyyyy\n")
+    EndTest()
+}

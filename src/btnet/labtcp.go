@@ -1,14 +1,10 @@
 package btnet
 
 import (
-	// "bufio"
-	// "bytes"
 	"encoding/binary"
 	"io"
 	"net"
 	"time"
-    // "errors"
-	//"time"
 	"util"
 )
 
@@ -35,19 +31,19 @@ func StartTCPServer(addr string, handler func(*net.TCPConn)) {
 	}(ln)
 }
 
-func DoDial(addr *net.TCPAddr, data []byte) *net.TCPConn {
+func DoDial(addr *net.TCPAddr, data []byte) (*net.TCPConn, error) {
 	util.IPrintf("Dialing: %v\n", addr.String())
 	conn, err := net.DialTCP("tcp", nil, addr)
 	if err != nil {
 		// Cry
 		util.EPrintf("labtcp DoDial: %s\n", err)
-		return conn
+		return conn, err
 	}
 	_, err = conn.Write(data)
 	if err != nil {
 		util.EPrintf("labtcp DoDail: %s\n", err)
 	}
-	return conn
+	return conn, err
 	// return ReadMessage(conn)
 }
 
@@ -106,7 +102,6 @@ func ReadMessage(conn *net.TCPConn) ([]byte, error) {
 // TODO: This doesnt work... wtf
 func IsConnectionClosed(conn *net.TCPConn) bool {
 	one := []byte{}
-	// conn.SetReadDeadline(time.Now())
 	if data, err := conn.Read(one); err == io.EOF {
 		util.ColorPrintf(util.Purple, "Closing the connection in labtcp/IsConnectionClosed\n")
 		conn.Close()

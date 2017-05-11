@@ -21,7 +21,7 @@ const (
 )
 
 const MaxPeers = 50
-const PeerWaitTime = time.Duration(10) * time.Second
+const PeerWaitTime = time.Duration(100) * time.Second
 
 // private tracker's peer state
 type peer struct {

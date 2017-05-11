@@ -218,7 +218,7 @@ func (cl *BTClient) SetupPeerConnections(addr *net.TCPAddr, conn *net.TCPConn) {
 			// if (!msg.KeepAlive) {
 
 			util.ColorPrintf(util.Cyan, "Sending encoded message from: %v, to: %v, type: %v\n",
-				peer.Conn.LocalAddr().String(), peer.Conn.RemoteAddr().String(), msg.Type)
+			peer.Conn.LocalAddr().String(), peer.Conn.RemoteAddr().String(), msg.Type)
 			// }
 			// We dont need a lock if only this thread is sending out TCP messages
 			// if (peer.Conn == nil) {
@@ -282,10 +282,10 @@ func (cl *BTClient) SendPeerMessage(addr *net.TCPAddr, message btnet.PeerMessage
 		cl.SetupPeerConnections(addr, nil)
 		peer, ok = cl.peers[addr.String()]
         if !ok {
-            util.EPrintf("This is not working\n")
+            util.EPrintf("Failed to establish a connection\n")
+            return
         }
         peer.MsgQueue <- message
-        // cl.lock("peering/sendPeerMessage")
         return
 	}
 
