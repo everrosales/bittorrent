@@ -28,6 +28,7 @@ type BTClient struct {
 	torrentPath string
 	torrentMeta fs.Metadata
 	infoHash    string
+	outputPath  string
 
 	heartbeatInterval int // number of seconds
 	status            status
@@ -43,7 +44,7 @@ type BTClient struct {
 	peers map[string]*btnet.Peer // map from IP to Peer
 }
 
-func StartBTClient(ip string, port int, metadataPath string, seedPath string, persister *Persister) *BTClient {
+func StartBTClient(ip string, port int, metadataPath string, seedPath string, outputPath string, persister *Persister) *BTClient {
 
 	cl := &BTClient{}
 	cl.persister = persister
@@ -54,6 +55,7 @@ func StartBTClient(ip string, port int, metadataPath string, seedPath string, pe
 	cl.torrentPath = metadataPath
 	cl.torrentMeta = fs.Read(metadataPath) // metadata
 	cl.infoHash = fs.GetInfoHash(fs.ReadTorrent(metadataPath))
+	cl.outputPath = outputPath
 
 	cl.heartbeatInterval = 5
 	cl.status = Started
@@ -106,6 +108,14 @@ func (cl *BTClient) CheckShutdown() bool {
 	return false
 }
 
+func (cl *BTClient) SaveOutput() {
+	cl.lock("main/saveoutput")
+	pieces := make([]fs.Piece, len(cl.Pieces))
+	copy(pieces, cl.Pieces)
+	cl.unlock("main/saveoutput")
+	fs.CombinePieces(cl.outputPath, pieces)
+}
+
 func (cl *BTClient) main() {
 	go cl.trackerHeartbeat()
 	cl.startServer()
@@ -119,6 +129,21 @@ func (cl *BTClient) main() {
 	}()
 
 	go cl.downloadPieces()
+
+	if cl.outputPath != "" {
+		go func() {
+			for {
+				cl.lock("main/main")
+				if allTrue(cl.PieceBitmap) {
+					// all pieces downloaded, save file
+					cl.unlock("main/main")
+					cl.SaveOutput()
+					return
+				}
+				cl.unlock("main/main")
+			}
+		}()
+	}
 
 	for {
 		if cl.CheckShutdown() {
