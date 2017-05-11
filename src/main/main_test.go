@@ -38,8 +38,8 @@ func TestTwoClients(t *testing.T) {
 	downloaderPersister := btclient.MakePersister("test2")
 
 	tr := bttracker.StartBTTracker(file, 8000)
-	seeder := btclient.StartBTClient("localhost", 6666, file, seed, seederPersister)
-	downloader := btclient.StartBTClient("localhost", 6667, file, "", downloaderPersister)
+	seeder := btclient.StartBTClient("localhost", 6666, file, seed, "", seederPersister)
+	downloader := btclient.StartBTClient("localhost", 6667, file, "", "puppy_download.jpg", downloaderPersister)
 
 	util.Wait(2000)
 

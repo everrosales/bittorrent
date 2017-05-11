@@ -15,6 +15,7 @@ func main() {
 	trackerFlag := flag.Bool("tracker", false, "Start tracker for torrent")
 	fileFlag := flag.String("file", "", "Torrent (.torrent) file (required)")
 	seedFlag := flag.String("seed", "", "The file for the client to seed (client only)")
+	seedFlag := flag.String("output", "", "The path to save the downloaded file (client only)")
 	debugFlag := flag.String("debug", "None", "Debug level [None|Info|Trace|Lock]")
 	portFlag := flag.Int("port", 8000, "Port (default 8000)")
 	flag.Parse()
