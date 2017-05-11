@@ -77,7 +77,7 @@ func TestTwoClients(t *testing.T) {
 }
 
 func TestThreeClients(t *testing.T) {
-	util.StartTest("Testing integration with one seeder and one downloader...")
+	util.StartTest("Testing integration with one seeder and two downloaders...")
 	file := TestTorrentSmall
 	seed := SeedFileSmall
 	output1 := "test/puppy_download2.jpg"
@@ -146,6 +146,6 @@ func TestThreeClients(t *testing.T) {
 // TODO: test with multiple seeders, multiple downloaders
 // TODO: test with 1 stopped peer
 // TODO: test with stopped and restarted seeder
-// TODO: test with stopped and restarted downloader
+// TODO: test with stopped and restarted downloader, test with persister
 // TODO: test with stopped and restarted tracker
 // TODO: test for seeding and downloading in parallel (how?)

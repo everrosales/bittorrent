@@ -24,6 +24,7 @@ func generate(input string, output string, url string, name string) {
 
 func main() {
 	showStatus := false
+	// TODO: add persister flag so we can restart client with partial downloads
 	clientFlag := flag.Bool("client", false, "Start client for torrent")
 	trackerFlag := flag.Bool("tracker", false, "Start tracker for torrent")
 	generateFlag := flag.Bool("generate", false, "Generate torrent file")
