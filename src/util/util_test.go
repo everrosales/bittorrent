@@ -18,7 +18,7 @@ var halfdeadBools []bool = []bool{true, true, false, true, true, true, true, fal
 var halfdeadBytes []byte = []byte{0xde, 0xa0}
 
 func init() {
-	Debug = Trace
+	Debug = None
 }
 
 func TestBoolsToBytes(t *testing.T) {

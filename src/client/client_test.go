@@ -41,6 +41,7 @@ func TestClientTCPServerNice(t *testing.T) {
 	servAddr := "localhost:6670"
 	tcpAddr, err := net.ResolveTCPAddr("tcp", servAddr)
 	if err != nil {
+		cl.Kill()
 		t.Fatalf("Error resolving TCP addr")
 	}
 
@@ -53,50 +54,42 @@ func TestClientTCPServerNice(t *testing.T) {
 			0x00, 0x01, 0x02, 0x03, 0x04, 0x05, 0x06, 0x07, 0x08, 0x09}}
 	data := btnet.EncodeHandshake(handshake)
 	// Sending KeepAlive
-	// util.TPrintf("Encoded data: %v\n", data)
 	connection, err := btnet.DoDial(tcpAddr, data)
 	if err != nil {
+		cl.Kill()
 		t.Fatalf("DoDial error: %s", err.Error())
 	}
 	util.Wait(100)
 	_, ok := cl.getPeer(connection.LocalAddr().String())
 	if !ok {
-		util.EPrintf("A peer should be connected\n")
-		t.Fail()
-		return
+		cl.Kill()
+		t.Fatalf("A peer should be connected\n")
 	}
-	// util.Printf("Passed first bit\n")
 
 	returnedData, err := btnet.ReadMessage(connection)
 	decodedMsg := btnet.DecodePeerMessage(returnedData, len(cl.torrentMeta.PieceHashes))
-	// util.TPrintf("msg: %v\n", decodedMsg)
 	if err != nil || decodedMsg.Type != 5 {
-		util.EPrintf("Did not recieve bitfield message\n%v\n", decodedMsg)
-		t.Fail()
+		cl.Kill()
+		t.Fatalf("Did not recieve bitfield message\n%v\n", decodedMsg)
 	}
 	// connection.Read
 
 	msg := btnet.PeerMessage{Type: btnet.Interested}
 	data = btnet.EncodePeerMessage(msg)
-	// util.Printf("Making a connection\n")
 	connection.Write(data)
 	util.Wait(100)
 	_, ok = cl.getPeer(connection.LocalAddr().String())
 	if !ok {
-		util.EPrintf("Client should be connected\n")
-		t.Fail()
-		return
+		cl.Kill()
+		t.Fatalf("Client should be connected\n")
 	}
 	connection.SetKeepAlive(false)
 
 	util.Wait(6000)
 	if cl.getNumPeers() > 0 {
-		util.EPrintf("There should be no peers connected\n")
 		cl.Kill()
-		t.Fail()
+		t.Fatalf("There should be no peers connected\n")
 	} else {
-		// util.Printf("Missing peer: %v\n", connection.LocalAddr())
-		// t.Fail()
 		cl.Kill()
 		util.EndTest()
 	}
@@ -104,7 +97,6 @@ func TestClientTCPServerNice(t *testing.T) {
 
 func TestClientTCPServer(t *testing.T) {
 	util.StartTest("Testing client TCP server...")
-	util.Printf("WARNING Expecting: \n\t[ERROR] labtcp ReadHandshake: EOF\n\t[ERROR] Badly formatted data\n")
 	cl := makeTestClient(6667)
 	// TODO: We should have a ready signal that we can check to see if
 	//       the client is ready to start
@@ -115,6 +107,7 @@ func TestClientTCPServer(t *testing.T) {
 	servAddr := "localhost:6667"
 	tcpAddr, err := net.ResolveTCPAddr("tcp", servAddr)
 	if err != nil {
+		cl.Kill()
 		t.Fatalf("Error resolving TCP addr")
 	}
 
@@ -122,13 +115,14 @@ func TestClientTCPServer(t *testing.T) {
 	baddata := []byte{0xde, 0xad, 0xbe, 0xef}
 	connection, err := btnet.DoDial(tcpAddr, baddata)
 	if err != nil {
+		cl.Kill()
 		t.Fatalf("DoDial error: %s", err.Error())
 	}
 	connection.SetDeadline(time.Now().Add(500 * time.Millisecond))
 	util.Wait(1000)
 	if cl.getNumPeers() > 0 {
-		util.EPrintf("There should be no peers connected\n")
-		t.Fail()
+		cl.Kill()
+		t.Fatalf("There should be no peers connected\n")
 	}
 	connection.Close()
 
@@ -142,38 +136,32 @@ func TestClientTCPServer(t *testing.T) {
 			0x00, 0x01, 0x02, 0x03, 0x04, 0x05, 0x06, 0x07, 0x08, 0x09}}
 	data := btnet.EncodeHandshake(handshake)
 	// Sending KeepAlive
-	// util.TPrintf("Encoded data: %v\n", data)
 	connection, err = btnet.DoDial(tcpAddr, data)
 	if err != nil {
+		cl.Kill()
 		t.Fatalf("DoDial error: %s", err.Error())
 	}
 	util.Wait(100)
 	_, ok := cl.getPeer(connection.LocalAddr().String())
 	if !ok {
-		util.EPrintf("A peer should be connected\n")
-		t.Fail()
-		return
+		cl.Kill()
+		t.Fatalf("A peer should be connected\n")
 	}
 
 	msg := btnet.PeerMessage{Type: btnet.Interested}
 	data = btnet.EncodePeerMessage(msg)
-	// util.Printf("Making a connection\n")
 	util.Wait(100)
 	_, ok = cl.getPeer(connection.LocalAddr().String())
 	if !ok {
-		util.EPrintf("Client should be connected\n")
-		t.Fail()
-		return
+		cl.Kill()
+		t.Fatalf("Client should be connected\n")
 	}
 
-	util.Wait(4000)
+	util.Wait(5000)
 	if cl.getNumPeers() > 0 {
-		util.EPrintf("There should be no peers connected\n")
 		cl.Kill()
-		t.Fail()
+		t.Fatalf("There should be no peers connected\n")
 	} else {
-		// util.Printf("Missing peer: %v\n", connection.LocalAddr())
-		// t.Fail()
 		cl.Kill()
 		util.EndTest()
 	}
@@ -183,17 +171,16 @@ func TestTwoPeers(t *testing.T) {
 	util.StartTest("Testing two peers...")
 	first := makeTestClient(6668)
 	util.Wait(1000)
-	util.Printf("Started peer 1\n")
 	second := makeTestClient(6669)
-	util.Printf("Started peer 2\n")
 	util.Wait(1000)
 	tcpAddr, _ := net.ResolveTCPAddr("tcp", "localhost:6669")
 	first.SendPeerMessage(tcpAddr, btnet.PeerMessage{KeepAlive: true})
 	util.Wait(10000)
 	// TODO: Make sure they do something interest
 	if second.getNumPeers() < 1 {
+		first.Kill()
+		second.Kill()
 		t.Fatalf("second peer list does not include the first")
-		t.Fail()
 	}
 
 	first.Kill()

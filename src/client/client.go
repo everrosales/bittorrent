@@ -11,6 +11,12 @@ import (
 	"util"
 )
 
+// TODO: randomize order we contact peers in
+// TODO: randomize pieces we request
+// TODO: fix error with stopping tracker contact
+// TODO: pruning client's peer list when tracker says that peer is down
+// TODO: download pieces in parallel
+
 type status string
 
 const (
