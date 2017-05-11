@@ -64,9 +64,10 @@ func EPrintf(format string, a ...interface{}) (n int, err error) {
 	return
 }
 
+// warning logging
 func WPrintf(format string, a ...interface{}) (n int, err error) {
 	if Debug <= Info {
-		ColorPrintf(Cyan, "[WARNING] "+format, a...)
+		ColorPrintf(Yellow, "[WARNING] "+format, a...)
 	}
 	return
 }
@@ -91,7 +92,7 @@ func TPrintf(format string, a ...interface{}) (n int, err error) {
 //lock logging
 func LPrintf(format string, a ...interface{}) (n int, err error) {
 	if Debug <= Lock {
-		ColorPrintf(Yellow, format, a...)
+		ColorPrintf(Purple, format, a...)
 	}
 	return
 }

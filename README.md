@@ -38,5 +38,5 @@ The file `main/torrent/test.torrent` is used in our unit tests and was downloade
 ### Manual Testing
 Run manual tests with the following commands:
 * `go run main.go -tracker -port=8000 -torrent=torrent/puppy.torrent -debug=Info`
-* `go run main.go -client -port=8001 -torrent=torrent/puppy.torrent -file=out.jpg`
-* `go run main.go -client -port=8002 -torrent=torrent/puppy.torrent -seed=seed/puppy.jpg`
+* `go run main.go -client -port=8001 -torrent=torrent/puppy.torrent -file=out.jpg -debug=Status`
+* `go run main.go -client -port=8002 -torrent=torrent/puppy.torrent -seed=seed/puppy.jpg -debug=Status`
