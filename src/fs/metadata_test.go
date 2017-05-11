@@ -14,6 +14,12 @@ func init() {
 	util.Debug = util.None
 }
 
+func TestReadIMGTorrent(t *testing.T) {
+    util.StartTest("Testing IMG torrent... ")
+    _ = Read("../main/torrent/IMG_4484.CR2.torrent")
+    util.EndTest()
+}
+
 func TestReadRealTorrent(t *testing.T) {
 	util.StartTest("Testing reading a real torrent...")
 	metadata := Read(TestFile)

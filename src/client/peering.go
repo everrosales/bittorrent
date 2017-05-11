@@ -87,7 +87,7 @@ func (cl *BTClient) sendBlock(index int, begin int, length int, peer *btnet.Peer
 
 func (cl *BTClient) saveBlock(index int, begin int, length int, block []byte) {
 	util.TPrintf("%s: in saveBlock\n", cl.port)
-	if begin%fs.BlockSize != 0 {
+	if begin % fs.BlockSize != 0 {
 		util.TPrintf("%s: not aligned with a block\n", cl.port)
 		return
 	}
@@ -105,14 +105,15 @@ func (cl *BTClient) saveBlock(index int, begin int, length int, block []byte) {
 		cl.blockBitmap[index] = make([]bool, cl.numBlocks(index), cl.numBlocks(index))
 	}
 	cl.blockBitmap[index][blockIndex] = true
-	util.TPrintf("%s: bitmaps %v %v\n", cl.port, cl.PieceBitmap, cl.blockBitmap)
+	util.TPrintf("%s: bitmaps %v\n", cl.port, cl.blockBitmap)
 
 	if allTrue(cl.blockBitmap[index]) {
 		util.TPrintf("%s: got all blocks for piece\n", cl.port)
 		// hash and save piece
+        // TODO: replace this hash
 		if cl.Pieces[index].Hash() != cl.torrentMeta.PieceHashes[index] {
 			util.TPrintf("%s: hash didn't match\n", cl.port)
-			util.TPrintf("%s: %s != %s\n", cl.port, cl.Pieces[index].Hash(), cl.torrentMeta.PieceHashes[index])
+			// util.TPrintf("%s: %x != %x\n", cl.port, cl.Pieces[index].Hash(), cl.torrentMeta.PieceHashes[index])
 			util.TPrintf("%s: hash lens %d, %d", cl.port, len(cl.Pieces[index].Hash()), len(cl.torrentMeta.PieceHashes[index]))
 			delete(cl.blockBitmap, index)
 			cl.unlock("peering/saveBlock")

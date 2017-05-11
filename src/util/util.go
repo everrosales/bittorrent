@@ -148,16 +148,15 @@ func BoolArrayEquals(first []bool, second []bool) bool {
 }
 
 func SplitEveryN(str string, n int) []string {
-	slices := []string{}
-	lastIndex := 0
-	for i := range str {
-		if i == len(str)-1 {
-			slices = append(slices, str[lastIndex:])
-		} else if i-lastIndex == 20 {
-			slices = append(slices, str[lastIndex:i])
-			lastIndex = i
-		}
-	}
+    slicesLen := len(str) / n
+    if (len(str) % n != 0) {
+        slicesLen += 1
+    }
+	slices := make([]string, slicesLen)
+	// lastIndex := 0
+    for i := 0; i < len(str); i++ {
+        slices[i/n] += string(str[i])
+    }
 	return slices
 }
 

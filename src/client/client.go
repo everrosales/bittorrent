@@ -113,7 +113,7 @@ func (cl *BTClient) SaveOutput() {
 	pieces := make([]fs.Piece, len(cl.Pieces))
 	copy(pieces, cl.Pieces)
 	cl.unlock("main/saveoutput")
-	fs.CombinePieces(cl.outputPath, pieces)
+	fs.CombinePieces(cl.outputPath, pieces, cl.torrentMeta.Files[0].Length)
 }
 
 func (cl *BTClient) main() {

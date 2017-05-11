@@ -105,12 +105,6 @@ func main() {
 		// util.ZeroCursor()
 		// util.ClearScreen()
 		// util.Printf(status)
-		go func() {
-			<-c
-			cleanup(cl)
-			os.Remove(tmpFile.Name())
-			os.Exit(1)
-		}()
 
 		go func() {
 			<-c
@@ -120,15 +114,15 @@ func main() {
 		}()
 
 		status, _ := cl.GetStatusString()
-		util.ZeroCursor()
-		util.ClearScreen()
-		util.Printf(status)
+		// util.ZeroCursor()
+		// util.ClearScreen()
+		// util.Printf(status)
 		for !cl.CheckShutdown() {
-			util.ZeroCursor()
+			// util.ZeroCursor()
 			status, _ = cl.GetStatusString()
 			util.Printf(status)
 			// util.MoveCursorDown(lines)
-			util.Wait(1)
+			util.Wait(1000)
 		}
 		return
 	}

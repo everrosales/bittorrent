@@ -74,8 +74,10 @@ func Read(path string) Metadata {
 	metadata.TrackerUrl = torrent.Announce
 	metadata.Name = torrent.Info["name"].(string)
 	metadata.PieceLen, _ = torrent.Info["piece length"].(int64)
+    util.EPrintf("%d\n", len(torrent.Info["pieces"].(string)))
 	metadata.PieceHashes = util.SplitEveryN(torrent.Info["pieces"].(string), 20)
-	if _, ok := torrent.Info["length"]; ok {
+    util.EPrintf("%d\n", len(metadata.PieceHashes))
+    if _, ok := torrent.Info["length"]; ok {
 		// single file
 		metadata.Files = []FileData{
 			FileData{
@@ -95,6 +97,7 @@ func Read(path string) Metadata {
 		// //     //     Path: file["path"] })
 		// // }
 	}
+    util.EPrintf("%d\n",metadata.Files[0].Length)
 	return metadata
 }
 

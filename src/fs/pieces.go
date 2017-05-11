@@ -44,8 +44,8 @@ func SplitIntoPieces(path string, pieceLen int) []Piece {
 }
 
 // combine a slice of pieces into one file, written out at path
-func CombinePieces(path string, pieces []Piece) {
-	data := []byte{}
+func CombinePieces(path string, pieces []Piece, totalLen int64) {
+	data := make([]byte, 0, totalLen)
 	for _, piece := range pieces {
 		for _, block := range piece.Blocks {
 			data = append(data, block...)
