@@ -8,6 +8,8 @@ import (
 	"util"
 )
 
+const TestFile = "../main/torrent/test.torrent"
+
 func init() {
 	util.Debug = util.None
 }
@@ -15,7 +17,7 @@ func init() {
 // Helpers
 func makeTestClient(port int) *BTClient {
 	persister := MakePersister("/tmp/persister/tclient.p")
-	return StartBTClient("localhost", port, "../main/test.torrent", "", "", persister)
+	return StartBTClient("localhost", port, TestFile, "", "", persister)
 }
 
 // Tests

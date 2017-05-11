@@ -8,6 +8,7 @@ import (
 )
 
 const TempTorrent = "temp.torrent"
+const TestFile = "../main/torrent/test.torrent"
 
 func init() {
 	util.Debug = util.None
@@ -15,7 +16,7 @@ func init() {
 
 func TestReadRealTorrent(t *testing.T) {
 	util.StartTest("Testing reading a real torrent...")
-	metadata := Read("../main/test.torrent")
+	metadata := Read(TestFile)
 	if metadata.TrackerUrl != "http://tracker.raspberrypi.org:6969/announce" {
 		t.Fatalf("Torrent URL unexpected")
 	}
@@ -24,7 +25,7 @@ func TestReadRealTorrent(t *testing.T) {
 
 func TestInfoHash(t *testing.T) {
 	util.StartTest("Testing info hash reading and encoding...")
-	torrent := ReadTorrent("../main/test.torrent")
+	torrent := ReadTorrent(TestFile)
 	infoHash := GetInfoHash(torrent)
 	if url.QueryEscape(infoHash) != "%C7%A2%CEDd0A%7B%FE%16%82%5C%BDa%DD6%DD%1DS%C1" {
 		t.Fatalf("Decoding info hash failed")

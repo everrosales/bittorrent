@@ -24,10 +24,19 @@ To run either the tracker or client, go in to `src/main` and run `go run main.go
 * `src/main` - the main command-line utility
 
 ## Testing
+### Automated Testing
 Run tests with `go test` in the following directories:
 * `src/btnet`
 * `src/client`
 * `src/fs`
 * `src/tracker`
 
-The file `main/test.torrent` is used in our unit tests and was downloaded from `https://downloads.raspberrypi.org/raspbian_lite_latest.torrent` in May 2017. 
+You can also run integration tests in `main` by running the command `go test main_test.go`.
+
+The file `main/torrent/test.torrent` is used in our unit tests and was downloaded from `https://downloads.raspberrypi.org/raspbian_lite_latest.torrent` in May 2017. Other test torrents used are in `main/torrent`.
+
+### Manual Testing
+Run manual tests with the following commands:
+* `go run main.go -tracker -port=8000 -torrent=torrent/puppy.torrent -debug=Info`
+* `go run main.go -client -port=8001 -torrent=torrent/puppy.torrent -file=out.jpg`
+* `go run main.go -client -port=8002 -torrent=torrent/puppy.torrent -seed=seed/puppy.jpg`
