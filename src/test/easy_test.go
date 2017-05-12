@@ -8,6 +8,10 @@ import (
 	"util"
 )
 
+func init() {
+	os.MkdirAll("out", 0777)
+}
+
 // Tests
 func TestOneDownloaderBasic(t *testing.T) {
 	util.StartTest("Testing small file with one seeder and one downloader...")

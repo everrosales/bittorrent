@@ -8,6 +8,10 @@ import (
 	"util"
 )
 
+func init() {
+	os.MkdirAll("out", 0777)
+}
+
 // start one seeder and one downloader, kill the seeder when the downloader is finished,
 // start up a new downloader that gets seeded, kill the first downloader when that one is done,
 // start two more downloaders

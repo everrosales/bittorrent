@@ -9,6 +9,10 @@ import (
 	"util"
 )
 
+func init() {
+	os.MkdirAll("out", 0777)
+}
+
 // spin up a swarm of seeders and downloaders, wait for one downloader to finish first,
 // kill all the seeders, and check for successful eventual downloading (with some random dropouts
 // thrown in for fun)
