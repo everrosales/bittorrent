@@ -76,6 +76,7 @@ func TestTwoClients(t *testing.T) {
 		}
 	}
 
+
 	same, err := util.CompareFiles(seed, output)
 	if err != nil || !same {
 		t.Fatalf("Seed file and downloaded file don't match: %s", err.Error())

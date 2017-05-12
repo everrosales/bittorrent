@@ -17,18 +17,6 @@ func (cl *BTClient) startTCPServer() {
 	btnet.StartTCPServer(cl.ip+":"+cl.port, cl.messageHandler)
 }
 
-func (cl *BTClient) connectToPeer(addr string) {
-	conn, err := net.DialTimeout("tcp", addr, DialTimeout)
-	if err != nil {
-		// TODO: try again or mark peer as down
-	}
-	// Create hello message
-	// TODO: here for compilation hehe
-	if conn != nil {
-	}
-	// Send hello message to peer
-}
-
 func (cl *BTClient) getPeer(addr string) (*btnet.Peer, bool) {
 	cl.lock("peering/getPeer")
 	p, ok := cl.peers[addr]
@@ -105,8 +93,8 @@ func (cl *BTClient) saveBlock(index int, begin int, length int, block []byte) {
 
 	if allTrue(cl.blockBitmap[index]) {
 		util.TPrintf("%s: got all blocks for piece\n", cl.port)
+
 		// hash and save piece
-		// TODO: replace this hash
 		if cl.Pieces[index].Hash() != cl.torrentMeta.PieceHashes[index] {
 			util.TPrintf("%s: hash didn't match\n", cl.port)
 			// util.TPrintf("%s: %x != %x\n", cl.port, cl.Pieces[index].Hash(), cl.torrentMeta.PieceHashes[index])
@@ -212,18 +200,9 @@ func (cl *BTClient) SetupPeerConnections(addr *net.TCPAddr, conn *net.TCPConn) {
 				msg = btnet.PeerMessage{KeepAlive: true}
 			}
 			data := btnet.EncodePeerMessage(msg)
-			// if (!msg.KeepAlive) {
-
 			util.TPrintf("Sending encoded message from: %v, to: %v, type: %v\n",
-				peer.Conn.LocalAddr().String(), peer.Conn.RemoteAddr().String(), msg.Type)
-			// }
-			// We dont need a lock if only this thread is sending out TCP messages
-			// if (peer.Conn == nil) {
-			//     util.EPrintf("FFS\n")
-			// }
+			peer.Conn.LocalAddr().String(), peer.Conn.RemoteAddr().String(), msg.Type)
 
-			// util.Printf("peer.Conn.RemoteAddr(): %v\n", peer.Conn.RemoteAddr())
-			// peer.Conn.SetWriteDeadline(time.Now().Add(time.Millisecond * 500))
 			_, err := peer.Conn.Write(data)
 			if err != nil {
 				// Connection is probably closed
@@ -233,7 +212,6 @@ func (cl *BTClient) SetupPeerConnections(addr *net.TCPAddr, conn *net.TCPConn) {
 					util.TPrintf("Closing the connection in peering/SetupPeerConnections\n")
 					peer.Conn.Close()
 				}
-				// cl.mu.Unlock()
 				return
 			}
 			util.TPrintf("Sent message type: %v, to: %s\n", msg.Type, peer.Conn.RemoteAddr().String())
@@ -291,14 +269,6 @@ func (cl *BTClient) SendPeerMessage(addr *net.TCPAddr, message btnet.PeerMessage
 }
 
 func (cl *BTClient) messageHandler(conn *net.TCPConn) {
-	// Max message size: 2^17 = 131072 (128KB)
-	// buf := make([]byte, 131072)
-	// bytesRead, err := conn.(*net.TCPConn).Read(buf)
-	// fmt.Println(bytesRead)
-	// if err != nil {
-	//   fmt.Println("hi")
-	// 	fmt.Println(err)
-	// }
 	// Check if this is a new connection
 	// If so we need to initialize the Peer
 	if conn.RemoteAddr() == nil {
@@ -310,9 +280,9 @@ func (cl *BTClient) messageHandler(conn *net.TCPConn) {
 		cl.SetupPeerConnections(conn.RemoteAddr().(*net.TCPAddr), conn)
 		return
 	}
-	// peer, ok = cl.peers[conn.RemoteAddr().String()]
-	util.TPrintf("~~~ Got a connection! ~~~\n")
-	for ok {
+
+    util.TPrintf("~~~ Got a connection! ~~~\n")
+	for {
 		// Process the message
 		buf, err := btnet.ReadMessage(conn)
 		if err != nil {
@@ -322,22 +292,12 @@ func (cl *BTClient) messageHandler(conn *net.TCPConn) {
 		}
 		peerMessage := btnet.DecodePeerMessage(buf, len(cl.torrentMeta.PieceHashes))
 		util.TPrintf("Received PeerMessage, type: %v, from: %s\n", peerMessage.Type, conn.RemoteAddr().String())
-		// Massive switch case that would handle incoming messages depending on message type
-
-		// peerMessage := btnet.PeerMessage{}  // empty for now, TODO
-		// util.TPrintf("Grabbing lock\n")
-		// cl.mu.Lock()
-		// defer cl.mu.Unlock()
-		// util.TPrintf("Got Lock\n")
-
-		// if peerMessage.KeepAlive {
-		// peer.KeepAlive <- true
-		// }
 
 		// Really anytime we receive a message we should treat this as
 		// a KeepAlive message
 		peer.KeepAlive <- true
 
+        // Massive switch case that would handle incoming messages depending on message type
 		if !peerMessage.KeepAlive {
 			switch peerMessage.Type {
 			case btnet.Choke:
@@ -359,15 +319,21 @@ func (cl *BTClient) messageHandler(conn *net.TCPConn) {
 				util.TPrintf("%s: received piece msg\n", cl.port)
 				cl.saveBlock(int(peerMessage.Index), peerMessage.Begin, peerMessage.Length, peerMessage.Block)
 			case btnet.Cancel:
-				// TODO
+				// TODO make a cancel queue and dont send out pieces if you recieve one of these
+                fallthrough
 			default:
-				// keepalive
-				// TODO?
+				// Unsupported message
+                util.TPrintf("%s: Unsupported message\n", cl.port)
+                // Drop the connection
+                conn.Close()
 			}
 		}
+
 		// Update okay to make sure that we still have a connection
-		// _, ok = cl.peers[conn.RemoteAddr().String()]
 		ok = conn.RemoteAddr() != nil
+        if !ok {
+            return
+        }
 	}
 	util.TPrintf("%s: exiting messageHandler\n", cl.port)
 }
