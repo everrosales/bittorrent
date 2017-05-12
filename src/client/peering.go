@@ -45,14 +45,17 @@ func (cl *BTClient) getNumPeers() int {
 
 func (cl *BTClient) requestBlock(piece int, block int) {
 	util.TPrintf("%s: want to request block, current peers %v\n", cl.port, cl.peers)
-	for addr, peer := range cl.peers {
+	peerList := cl.getRandomPeerOrder()
+	for _, peer := range peerList {
 		util.TPrintf("%s: peer bitfield: %v\n", cl.port, peer.Bitfield)
 		if peer.Bitfield[piece] && !peer.Status.PeerChoking {
-			util.TPrintf("%s: requesting piece %d block %d from peer %s\n", cl.port, piece, block, addr)
+			util.TPrintf("%s: requesting piece %d block %d from peer %s\n", cl.port, piece, block, peer.Addr)
 			begin := block * fs.BlockSize
 			cl.sendRequestMessage(peer, piece, begin, fs.BlockSize)
 		}
 	}
+
+
 }
 
 func (cl *BTClient) sendBlock(index int, begin int, length int, peer *btnet.Peer) {

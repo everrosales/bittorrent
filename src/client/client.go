@@ -11,11 +11,11 @@ import (
 	"util"
 )
 
-// TODO: randomize order we contact peers in
 // TODO: fix error with stopping tracker contact
 // TODO: pruning client's peer list when tracker says that peer is down
-// TODO: download pieces in parallel
 // TODO: run with -race and remove ALL RACES
+
+const NumDownloaders int = 5
 
 type status string
 
@@ -70,7 +70,7 @@ func StartBTClient(ip string, port int, metadataPath string, seedPath string, ou
 
 	cl.numPieces = len(cl.torrentMeta.PieceHashes)
 	cl.blockBitmap = make(map[int][]bool)
-	cl.neededPieces = make(chan int)
+	cl.neededPieces = make(chan int, 100)
 	cl.Pieces = make([]fs.Piece, cl.numPieces, cl.numPieces)
 	for i := range cl.Pieces {
 		piece := &cl.Pieces[i]
@@ -158,7 +158,9 @@ func (cl *BTClient) main() {
 		}
 	}()
 
-	go cl.downloadPieces()
+	for i:=0; i<NumDownloaders; i++ {
+		go cl.downloadPieces()
+	}
 
 	if cl.outputPath != "" {
 		go cl.CheckSaveOutput()
@@ -178,4 +180,18 @@ func (cl *BTClient) GetStatusString() (string, int) {
 	bitfield, lines := util.BitfieldToString(cl.PieceBitmap, 40)
 	output += bitfield + "\n"
 	return output, lines + 2
+}
+
+func (cl * BTClient) getRandomPeerOrder() []*btnet.Peer {
+	cl.lock("client/getRandomPeerOrder")
+	peerList := make([]*btnet.Peer, len(cl.peers))
+	order := rand.Perm(len(peerList))
+	i := 0
+	// create a list of peers in random order
+	for addr := range cl.peers {
+		peerList[order[i]] = cl.peers[addr]
+		i += 1
+	}
+	cl.unlock("client/getRandomPeerOrder")
+	return peerList
 }

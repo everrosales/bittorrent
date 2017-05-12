@@ -2,12 +2,15 @@ package btclient
 
 import (
 	"util"
+	"time"
 )
 
 func (cl *BTClient) downloadPiece(piece int) {
+	cl.lock("downloader/downloadPiece")
 	if _, ok := cl.blockBitmap[piece]; !ok {
 		cl.blockBitmap[piece] = make([]bool, cl.numBlocks(piece), cl.numBlocks(piece))
 	}
+	cl.unlock("downloader/downloadPiece")
 	for i := 0; i < cl.numBlocks(piece); i++ {
 		cl.requestBlock(piece, i)
 	}
@@ -20,6 +23,7 @@ func (cl *BTClient) downloadPieces() {
 		if cl.CheckShutdown() {
 			return
 		}
+
 		piece := <-cl.neededPieces
 		cl.lock("downloading/downloadPieces 1")
 		if !cl.PieceBitmap[piece] {
@@ -30,7 +34,7 @@ func (cl *BTClient) downloadPieces() {
 		}
 		cl.unlock("downloading/downloadPieces 1")
 
-		util.Wait(200)
+		cl.waitUntilDownloaded(piece)
 
 		cl.lock("downloading/downloadPieces 2")
 		if !cl.PieceBitmap[piece] {
@@ -41,5 +45,26 @@ func (cl *BTClient) downloadPieces() {
 			}()
 		}
 		cl.unlock("downloading/downloadPieces 2")
+	}
+}
+
+func (cl *BTClient) waitUntilDownloaded(piece int) {
+	downloaded := make(chan bool, 1)
+	go func() {
+		for {
+			cl.lock("downloading/waitUntilDownloaded")
+			done := cl.PieceBitmap[piece]
+			cl.unlock("downloading/waitUntilDownloaded")
+			if done {
+				downloaded <- true
+				return
+			}
+			util.Wait(10)
+		}
+	}()
+
+	select {
+	case <- downloaded:
+	case <- time.After(time.Millisecond * 200):
 	}
 }
