@@ -1,6 +1,8 @@
 # 6.824 Final Project
 For our final project for MIT's 6.824 (Distributed Systems), our team implemented a Bittorrent client and tracker in Go. 
 
+<img src="screenshot.png" width="400px">
+
 ## Team Members
 * Nicole Glabinski (nicolekg)
 * Everardo Rosales (erosales)
