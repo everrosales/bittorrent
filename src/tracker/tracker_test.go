@@ -32,7 +32,7 @@ const Port3 = "6884"
 const InfoHash = "%C7%A2%CEDd0A%7B%FE%16%82%5C%BDa%DD6%DD%1DS%C1"
 const BetweenTests = 50
 
-const TestTorrent = "../main/torrent/test.torrent"
+const TestTorrent = "../test/torrent/test.torrent"
 
 func init() {
 	util.Debug = util.None

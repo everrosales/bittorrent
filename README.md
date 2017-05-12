@@ -28,13 +28,12 @@ You can also generate `.torrent` files using the main utility. Run a command lik
 ## Testing
 ### Automated Testing
 Run tests with `go test` in the following directories:
-* `src/btnet`
-* `src/client`
-* `src/fs`
-* `src/tracker`
-* `src/util`
-
-You can also run integration tests in `main` by running the command `go test main_test.go`.
+* `src/btnet` - network
+* `src/client` - client
+* `src/fs` - torrent file utilities
+* `src/main` - integration tests
+* `src/tracker` - tracker
+* `src/util` - general utilities
 
 The file `main/torrent/test.torrent` is used in our unit tests and was downloaded from `https://downloads.raspberrypi.org/raspbian_lite_latest.torrent` in May 2017. Other test torrents used are in `main/torrent`.
 

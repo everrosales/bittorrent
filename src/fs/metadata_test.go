@@ -8,16 +8,16 @@ import (
 )
 
 const TempTorrent = "temp.torrent"
-const TestFile = "../main/torrent/test.torrent"
+const TestFile = "../test/torrent/test.torrent"
 
 func init() {
 	util.Debug = util.None
 }
 
 func TestReadIMGTorrent(t *testing.T) {
-    util.StartTest("Testing IMG torrent... ")
-    _ = Read("../main/torrent/IMG_4484.CR2.torrent")
-    util.EndTest()
+	util.StartTest("Testing IMG torrent... ")
+	_ = Read("../test/torrent/IMG_4484.CR2.torrent")
+	util.EndTest()
 }
 
 func TestReadRealTorrent(t *testing.T) {

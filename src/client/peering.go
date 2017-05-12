@@ -109,9 +109,9 @@ func (cl *BTClient) saveBlock(index int, begin int, length int, block []byte) {
 		copy(pieceBitmap, cl.PieceBitmap)
 		pieces := make([]fs.Piece, len(cl.Pieces))
 		copy(pieces, cl.Pieces)
-		cl.unlock("peering/saveBlock")
+		// cl.unlock("peering/saveBlock")
 		cl.persister.persistPieces(pieces, pieceBitmap)
-		cl.lock("peering/saveBlock")
+		// cl.lock("peering/saveBlock")
 	}
 	cl.unlock("peering/saveBlock")
 

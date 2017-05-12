@@ -8,7 +8,7 @@ import (
 	"util"
 )
 
-const TestFile = "../main/torrent/test.torrent"
+const TestFile = "../test/torrent/test.torrent"
 
 func init() {
 	util.Debug = util.None

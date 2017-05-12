@@ -1,4 +1,4 @@
-package main
+package test
 
 import (
 	"bytes"
@@ -41,7 +41,7 @@ func TestTwoClients(t *testing.T) {
 	util.StartTest("Testing small file with one seeder and one downloader...")
 	file := TestTorrentSmall
 	seed := SeedFileSmall
-	output := "test/puppy_download1.jpg"
+	output := "out/puppy_download1.jpg"
 
 	seederPersister := btclient.MakePersister("test1")
 	downloaderPersister := btclient.MakePersister("test2")
@@ -76,7 +76,6 @@ func TestTwoClients(t *testing.T) {
 		}
 	}
 
-
 	same, err := util.CompareFiles(seed, output)
 	if err != nil || !same {
 		t.Fatalf("Seed file and downloaded file don't match: %s", err.Error())
@@ -89,8 +88,8 @@ func TestThreeClients(t *testing.T) {
 	util.StartTest("Testing small file with one seeder and two downloaders...")
 	file := TestTorrentSmall
 	seed := SeedFileSmall
-	output1 := "test/puppy_download2.jpg"
-	output2 := "test/puppy_download3.jpg"
+	output1 := "out/puppy_download2.jpg"
+	output2 := "out/puppy_download3.jpg"
 
 	seederPersister := btclient.MakePersister("test1")
 	downloaderPersister := btclient.MakePersister("test2")
@@ -158,7 +157,7 @@ func TestTwoClientsLargeFile(t *testing.T) {
 	util.StartTest("Testing 36 piece file with one seeder and one downloader...")
 	file := TestTorrentLarge
 	seed := SeedFileLarge
-	output := "test/pupper_download1.jpg"
+	output := "out/pupper_download1.jpg"
 
 	seederPersister := btclient.MakePersister("test1")
 	downloaderPersister := btclient.MakePersister("test2")

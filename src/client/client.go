@@ -158,7 +158,7 @@ func (cl *BTClient) main() {
 		}
 	}()
 
-	for i:=0; i<NumDownloaders; i++ {
+	for i := 0; i < NumDownloaders; i++ {
 		go cl.downloadPieces()
 	}
 
@@ -193,7 +193,7 @@ func (cl *BTClient) GetStatusString() (string, int) {
 	return output, lines + 2
 }
 
-func (cl * BTClient) getRandomPeerOrder() []*btnet.Peer {
+func (cl *BTClient) getRandomPeerOrder() []*btnet.Peer {
 	cl.lock("client/getRandomPeerOrder")
 	peerList := make([]*btnet.Peer, len(cl.peers))
 	order := rand.Perm(len(peerList))

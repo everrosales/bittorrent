@@ -109,5 +109,17 @@ func TestSplitAndCombineHashes(t *testing.T) {
 	if len(pieces[3]) != 5 {
 		t.Fatalf("Last piece is not right length: %d != 5", len(pieces[3]))
 	}
+	if pieces[0] != string(shaStr1[:20]) {
+		t.Fatalf("String 1 didn't match: %s != %s", pieces[0], string(shaStr1[:20]))
+	}
+	if pieces[1] != string(shaStr2[:20]) {
+		t.Fatalf("String 2 didn't match: %s != %s", pieces[1], string(shaStr2[:20]))
+	}
+	if pieces[2] != string(shaStr3[:20]) {
+		t.Fatalf("String 3 didn't match: %s != %s", pieces[2], string(shaStr3[:20]))
+	}
+	if pieces[3] != "aaaaa" {
+		t.Fatalf("String 4 didn't match: %s != aaaaa", pieces[3])
+	}
 	EndTest()
 }
