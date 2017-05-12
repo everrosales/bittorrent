@@ -59,7 +59,7 @@ func loadDataFromPersister(ps *btclient.Persister) btclient.BTClient {
 
 // fails if test times out
 func waitUntilDone(t *testing.T, all bool, cls ...*btclient.BTClient) {
-	timer := time.NewTimer(time.Second * 30)
+	timer := time.NewTimer(time.Second * 60)
 	for {
 		allDone := true
 		for _, cl := range cls {
@@ -85,7 +85,7 @@ func waitUntilDone(t *testing.T, all bool, cls ...*btclient.BTClient) {
 
 // fails if test times out
 func waitUntilStarted(t *testing.T, cls ...*btclient.BTClient) {
-	timer := time.NewTimer(time.Second * 5)
+	timer := time.NewTimer(time.Second * 30)
 	for {
 		allStarted := true
 		for _, cl := range cls {
