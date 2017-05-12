@@ -12,7 +12,6 @@ import (
 )
 
 // TODO: randomize order we contact peers in
-// TODO: randomize pieces we request
 // TODO: fix error with stopping tracker contact
 // TODO: pruning client's peer list when tracker says that peer is down
 // TODO: download pieces in parallel
@@ -83,7 +82,7 @@ func StartBTClient(ip string, port int, metadataPath string, seedPath string, ou
 
 	cl.loadPieces(persister.ReadState())
 
-	util.TPrintf("\nClient for %s listening on port %d\n", metadataPath, port)
+	util.IPrintf("\nClient for %s listening on port %d\n", metadataPath, port)
 
 	if seedPath != "" {
 		cl.Seed(seedPath)
@@ -93,6 +92,7 @@ func StartBTClient(ip string, port int, metadataPath string, seedPath string, ou
 	return cl
 }
 
+// sends shutdown message
 func (cl *BTClient) Kill() {
 	select {
 	case _, ok := <-cl.shutdown:
@@ -116,6 +116,7 @@ func (cl *BTClient) CheckShutdown() bool {
 	return false
 }
 
+// returns true if file download is done
 func (cl *BTClient) CheckDone() bool {
 	cl.lock("checking done")
 	defer cl.unlock("checking done")
@@ -125,41 +126,42 @@ func (cl *BTClient) CheckDone() bool {
 	return false
 }
 
-func (cl *BTClient) SaveOutput() {
-	cl.lock("main/saveoutput")
-	pieces := make([]fs.Piece, len(cl.Pieces))
-	copy(pieces, cl.Pieces)
-	cl.unlock("main/saveoutput")
-	fs.CombinePieces(cl.outputPath, pieces, cl.torrentMeta.Files[0].Length)
+// check whether download is finished and combines and saves output if it's done
+func (cl *BTClient) CheckSaveOutput() {
+	for {
+		if cl.CheckShutdown() {
+			return
+		}
+		cl.lock("main/saveoutput")
+		if allTrue(cl.PieceBitmap) {
+			pieces := make([]fs.Piece, len(cl.Pieces))
+			copy(pieces, cl.Pieces)
+			cl.unlock("main/saveoutput")
+			fs.CombinePieces(cl.outputPath, pieces, cl.torrentMeta.Files[0].Length)
+			return
+		}
+		cl.unlock("main/saveoutput")
+		util.Wait(100)
+	}
 }
 
 func (cl *BTClient) main() {
-	go cl.trackerHeartbeat()
-	cl.startServer()
-
 	rand.Seed(time.Now().UnixNano())
-	go func() {
-		for i := range rand.Perm(cl.numPieces) {
-			util.TPrintf("%s: adding piece %d to needed queue\n", cl.port, i)
-			cl.neededPieces <- i
+	go cl.trackerHeartbeat() // start sending heartbeats to tracker
+	go cl.startTCPServer()   // start TCP server for communicating with peers
+
+	go func() { // adding the initially needed pieces to the needed queue
+		for _, i := range rand.Perm(cl.numPieces) {
+			if !cl.atomicGetBitmapElement(i) {
+				cl.neededPieces <- i
+			}
 		}
 	}()
 
 	go cl.downloadPieces()
 
 	if cl.outputPath != "" {
-		go func() {
-			for {
-				cl.lock("main/main")
-				if allTrue(cl.PieceBitmap) {
-					// all pieces downloaded, save file
-					cl.unlock("main/main")
-					cl.SaveOutput()
-					return
-				}
-				cl.unlock("main/main")
-			}
-		}()
+		go cl.CheckSaveOutput()
 	}
 
 	for {

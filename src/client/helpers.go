@@ -19,6 +19,12 @@ func (cl *BTClient) numBlocks(piece int) int {
 	return fs.NumBlocksInPiece(piece, int(cl.torrentMeta.PieceLen), cl.torrentMeta.GetLength())
 }
 
+func (cl *BTClient) atomicGetBitmapElement(index int) bool {
+	cl.lock("getting bitmap element")
+	defer cl.unlock("getting bitmap element")
+	return cl.PieceBitmap[index]
+}
+
 func allTrue(arr []bool) bool {
 	for _, entry := range arr {
 		if !entry {

@@ -13,16 +13,9 @@ import (
 const peerTimeout = time.Millisecond * 3000
 const DialTimeout = time.Millisecond * 100
 
-func (cl *BTClient) startServer() {
+func (cl *BTClient) startTCPServer() {
 	btnet.StartTCPServer(cl.ip+":"+cl.port, cl.messageHandler)
 }
-
-// func (cl *BTClient) listenForPeers() {
-//   // Set up stuff
-//   cl.startServer()
-//
-//   //TODO: Send initial hello packets
-// }
 
 func (cl *BTClient) connectToPeer(addr string) {
 	conn, err := net.DialTimeout("tcp", addr, DialTimeout)
@@ -87,7 +80,7 @@ func (cl *BTClient) sendBlock(index int, begin int, length int, peer *btnet.Peer
 
 func (cl *BTClient) saveBlock(index int, begin int, length int, block []byte) {
 	util.TPrintf("%s: in saveBlock\n", cl.port)
-	if begin % fs.BlockSize != 0 {
+	if begin%fs.BlockSize != 0 {
 		util.TPrintf("%s: not aligned with a block\n", cl.port)
 		return
 	}
@@ -110,7 +103,7 @@ func (cl *BTClient) saveBlock(index int, begin int, length int, block []byte) {
 	if allTrue(cl.blockBitmap[index]) {
 		util.TPrintf("%s: got all blocks for piece\n", cl.port)
 		// hash and save piece
-        // TODO: replace this hash
+		// TODO: replace this hash
 		if cl.Pieces[index].Hash() != cl.torrentMeta.PieceHashes[index] {
 			util.TPrintf("%s: hash didn't match\n", cl.port)
 			// util.TPrintf("%s: %x != %x\n", cl.port, cl.Pieces[index].Hash(), cl.torrentMeta.PieceHashes[index])
@@ -219,7 +212,7 @@ func (cl *BTClient) SetupPeerConnections(addr *net.TCPAddr, conn *net.TCPConn) {
 			// if (!msg.KeepAlive) {
 
 			util.TPrintf("Sending encoded message from: %v, to: %v, type: %v\n",
-			peer.Conn.LocalAddr().String(), peer.Conn.RemoteAddr().String(), msg.Type)
+				peer.Conn.LocalAddr().String(), peer.Conn.RemoteAddr().String(), msg.Type)
 			// }
 			// We dont need a lock if only this thread is sending out TCP messages
 			// if (peer.Conn == nil) {
@@ -282,16 +275,16 @@ func (cl *BTClient) SendPeerMessage(addr *net.TCPAddr, message btnet.PeerMessage
 		cl.unlock("peering/sendPeerMessage")
 		cl.SetupPeerConnections(addr, nil)
 		peer, ok = cl.peers[addr.String()]
-        if !ok {
-            util.WPrintf("Failed to establish a connection\n")
-            return
-        }
-        peer.MsgQueue <- message
-        return
+		if !ok {
+			util.WPrintf("Failed to establish a connection\n")
+			return
+		}
+		peer.MsgQueue <- message
+		return
 	}
 
-    cl.unlock("peering/sendPeerMessage")
-    peer.MsgQueue <- message
+	cl.unlock("peering/sendPeerMessage")
+	peer.MsgQueue <- message
 }
 
 func (cl *BTClient) messageHandler(conn *net.TCPConn) {
@@ -315,13 +308,13 @@ func (cl *BTClient) messageHandler(conn *net.TCPConn) {
 		return
 	}
 	// peer, ok = cl.peers[conn.RemoteAddr().String()]
-    util.TPrintf("~~~ Got a connection! ~~~\n")
+	util.TPrintf("~~~ Got a connection! ~~~\n")
 	for ok {
 		// Process the message
 		buf, err := btnet.ReadMessage(conn)
 		if err != nil {
 			util.WPrintf("%s\n", err)
-            conn.Close()
+			conn.Close()
 			return
 		}
 		peerMessage := btnet.DecodePeerMessage(buf, len(cl.torrentMeta.PieceHashes))

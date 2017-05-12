@@ -5,7 +5,6 @@ import (
 )
 
 func (cl *BTClient) downloadPiece(piece int) {
-	util.TPrintf("%s: need to download piece %d\n", cl.port, piece)
 	if _, ok := cl.blockBitmap[piece]; !ok {
 		cl.blockBitmap[piece] = make([]bool, cl.numBlocks(piece), cl.numBlocks(piece))
 	}
@@ -14,6 +13,8 @@ func (cl *BTClient) downloadPiece(piece int) {
 	}
 }
 
+// grab pieces off the needed queue and try downloading them
+// re-adds pieces to queue if they weren't successfully downloaded
 func (cl *BTClient) downloadPieces() {
 	for {
 		if cl.CheckShutdown() {
@@ -23,6 +24,7 @@ func (cl *BTClient) downloadPieces() {
 		cl.lock("downloading/downloadPieces 1")
 		if !cl.PieceBitmap[piece] {
 			cl.unlock("downloading/downloadPieces 1")
+			util.TPrintf("%s: trying to download piece %d\n", cl.port, piece)
 			cl.downloadPiece(piece)
 			cl.lock("downloading/downloadPieces 1")
 		}
@@ -32,7 +34,7 @@ func (cl *BTClient) downloadPieces() {
 
 		cl.lock("downloading/downloadPieces 2")
 		if !cl.PieceBitmap[piece] {
-			util.TPrintf("%s: piece was not downloaded\n", cl.port)
+			util.TPrintf("%s: piece %d was not downloaded\n", cl.port, piece)
 			// piece still not downloaded, add it back to queue
 			go func() {
 				cl.neededPieces <- piece
