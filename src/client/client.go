@@ -27,6 +27,7 @@ const (
 type BTClient struct {
 	mu        sync.Mutex
 	persister *Persister
+	alive     bool
 
 	ip          string
 	port        string
@@ -38,7 +39,6 @@ type BTClient struct {
 
 	heartbeatInterval int // number of seconds
 	status            status
-	shutdown          chan bool
 
 	numPieces    int
 	blockBitmap  map[int][]bool
@@ -54,6 +54,7 @@ func StartBTClient(ip string, port int, metadataPath string, seedPath string, ou
 
 	cl := &BTClient{}
 	cl.persister = persister
+	cl.alive = true
 
 	cl.ip = ip
 	cl.port = strconv.Itoa(port)
@@ -65,7 +66,6 @@ func StartBTClient(ip string, port int, metadataPath string, seedPath string, ou
 
 	cl.heartbeatInterval = 1
 	cl.status = Started
-	cl.shutdown = make(chan bool)
 
 	cl.numPieces = len(cl.torrentMeta.PieceHashes)
 	cl.blockBitmap = make(map[int][]bool)
@@ -93,28 +93,16 @@ func StartBTClient(ip string, port int, metadataPath string, seedPath string, ou
 
 // sends shutdown message
 func (cl *BTClient) Kill() {
-	select {
-	case _, ok := <-cl.shutdown:
-		if ok {
-			util.WPrintf("Killing the server\n")
-			close(cl.shutdown)
-		}
-	default:
-		util.WPrintf("nothing\n")
-		// channel already closed
-	}
+	cl.lock("killing")
+	cl.alive = false
+	cl.unlock("killing")
 }
 
 // returns true if the client has been ordered to shut down
 func (cl *BTClient) CheckShutdown() bool {
-	select {
-	case _, ok := <-cl.shutdown:
-		if !ok {
-			return true
-		}
-	default:
-	}
-	return false
+	cl.lock("checking shutdown")
+	defer cl.unlock("checking shutdown")
+	return !cl.alive
 }
 
 // returns true if file download is done
