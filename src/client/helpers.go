@@ -17,15 +17,6 @@ func (cl *BTClient) unlock(msg string) {
 	cl.mu.Unlock()
 }
 
-func allTrue(arr []bool) bool {
-	for _, entry := range arr {
-		if !entry {
-			return false
-		}
-	}
-	return true
-}
-
 func (cl *BTClient) numBlocks(piece int) int {
 	return fs.NumBlocksInPiece(piece, int(cl.torrentMeta.PieceLen), cl.torrentMeta.GetLength())
 }
@@ -40,6 +31,14 @@ func (cl *BTClient) getRandomPeerOrder() []*btnet.Peer {
 		i += 1
 	}
 	return peerList
+}
+
+func (cl *BTClient) AtomicGetBitmap() []bool {
+	cl.lock("getting bitmap element")
+	defer cl.unlock("getting bitmap element")
+	result := make([]bool, len(cl.PieceBitmap))
+	copy(result, cl.PieceBitmap)
+	return result
 }
 
 func (cl *BTClient) atomicGetBitmapElement(index int) bool {

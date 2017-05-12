@@ -11,7 +11,6 @@ import (
 	"util"
 )
 
-// TODO: fix error with stopping tracker contact
 // TODO: pruning client's peer list when tracker says that peer is down
 
 const NumDownloaders int = 5
@@ -108,11 +107,17 @@ func (cl *BTClient) CheckShutdown() bool {
 // returns true if file download is done
 func (cl *BTClient) CheckDone() bool {
 	cl.lock("checking done")
-	if allTrue(cl.PieceBitmap) { // if done, save piece
-		pieces := make([]fs.Piece, len(cl.Pieces))
-		copy(pieces, cl.Pieces)
-		cl.unlock("checking done")
-		fs.CombinePieces(cl.outputPath, pieces, cl.torrentMeta.Files[0].Length)
+	if util.AllTrue(cl.PieceBitmap) { // if done, save piece
+		if cl.status != Completed {
+			pieces := make([]fs.Piece, len(cl.Pieces))
+			copy(pieces, cl.Pieces)
+			cl.status = Completed
+			util.IPrintf("%s: Done downloading, writing to %s\n", cl.port, cl.outputPath)
+			cl.unlock("checking done")
+			fs.CombinePieces(cl.outputPath, pieces, cl.torrentMeta.Files[0].Length)
+		} else {
+			cl.unlock("checking done")
+		}
 		return true
 	}
 	cl.unlock("checking done")

@@ -79,7 +79,7 @@ func (cl *BTClient) saveBlock(index int, begin int, length int, block []byte) {
 	}
 	cl.blockBitmap[index][blockIndex] = true
 
-	if allTrue(cl.blockBitmap[index]) {
+	if util.AllTrue(cl.blockBitmap[index]) {
 		// hash and save piece
 		if cl.Pieces[index].Hash() != cl.torrentMeta.PieceHashes[index] {
 			util.WPrintf("%s: hashes didn't match - lengths: %d, %d", cl.port, len(cl.Pieces[index].Hash()), len(cl.torrentMeta.PieceHashes[index]))
@@ -100,9 +100,7 @@ func (cl *BTClient) saveBlock(index int, begin int, length int, block []byte) {
 	for _, addr := range cl.atomicGetPeerAddrs() {
 		// send have message
 		p, ok := cl.atomicGetPeer(addr)
-		if !ok {
-			util.EPrintf("%s: peer %s not found\n", cl.port, addr)
-		} else {
+		if ok {
 			cl.sendHaveMessage(p, index, begin, length)
 		}
 	}

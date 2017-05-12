@@ -117,6 +117,26 @@ func Wait(milliseconds int) {
 	<-time.After(time.Millisecond * time.Duration(milliseconds))
 }
 
+// check if bool array is all true
+func AllTrue(arr []bool) bool {
+	for _, entry := range arr {
+		if !entry {
+			return false
+		}
+	}
+	return true
+}
+
+// check if bool array is all false
+func AllFalse(arr []bool) bool {
+	for _, entry := range arr {
+		if entry {
+			return false
+		}
+	}
+	return true
+}
+
 // check if every element in a byte array is equal
 func ByteArrayEquals(first []byte, second []byte) bool {
 	if first == nil && second == nil {
