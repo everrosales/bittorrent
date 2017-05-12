@@ -17,7 +17,6 @@ func StartTCPServer(addr string, handler func(*net.TCPConn)) bool {
 	}
 	ln, err := net.ListenTCP("tcp", tcpAddr)
 	if err != nil {
-		// complain about things dying
 		util.WPrintf("labtcp StartTCPServer: %s\n", err)
 		if strings.Contains(err.Error(), "address already in use") {
 			return false
@@ -27,7 +26,6 @@ func StartTCPServer(addr string, handler func(*net.TCPConn)) bool {
 		for {
 			conn, err := ln.AcceptTCP()
 			if err != nil {
-				// complain about a thing
 				util.WPrintf("labtcp StartTCPServer: %s\n", err)
 			}
 			go handler(conn)

@@ -173,6 +173,7 @@ func (cl *BTClient) GetStatusString() (string, int) {
 	// peers messages.
 	// TODO: Split up the listen messageHandler and the request->response
 	//       messageHandler
+	// TODO: add most recent peers downloaded to status string
 	output := fmt.Sprintf("Known peers: %d\n", len(cl.peers)/2)
 	output += "Download status: "
 	bitfield, lines := util.BitfieldToString(cl.PieceBitmap, 40)
