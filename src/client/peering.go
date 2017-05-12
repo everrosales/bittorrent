@@ -17,27 +17,16 @@ func (cl *BTClient) startTCPServer() {
 	btnet.StartTCPServer(cl.ip+":"+cl.port, cl.messageHandler)
 }
 
-func (cl *BTClient) getPeer(addr string) (*btnet.Peer, bool) {
-	cl.lock("peering/getPeer")
-	p, ok := cl.peers[addr]
-	cl.unlock("peering/getPeer")
-	return p, ok
-}
-
-func (cl *BTClient) getNumPeers() int {
-	cl.lock("peering/getNumPeers")
-	num := len(cl.peers)
-	cl.unlock("peering/getNumPeers")
-	return num
-}
-
 func (cl *BTClient) requestBlock(piece int, block int) {
-	util.TPrintf("%s: want to request block, current peers %v\n", cl.port, cl.peers)
+	cl.lock("peering/requestBlock")
+	util.TPrintf("%s: want to request piece %d block %d, current peers %v\n", cl.port, piece, block, cl.peers)
 	peerList := cl.getRandomPeerOrder()
+	port := cl.port
+	cl.unlock("peering/requestBlock")
+
 	for _, peer := range peerList {
-		util.TPrintf("%s: peer bitfield: %v\n", cl.port, peer.Bitfield)
-		if peer.Bitfield[piece] && !peer.Status.PeerChoking {
-			util.TPrintf("%s: requesting piece %d block %d from peer %s\n", cl.port, piece, block, peer.Addr)
+		if peer.GetBitfield()[piece] && !peer.GetStatus().PeerChoking {
+			util.TPrintf("%s: requesting piece %d block %d from peer %s\n", port, piece, block, peer.Addr)
 			begin := block * fs.BlockSize
 			cl.sendRequestMessage(peer, piece, begin, fs.BlockSize)
 		}
@@ -46,10 +35,8 @@ func (cl *BTClient) requestBlock(piece int, block int) {
 }
 
 func (cl *BTClient) sendBlock(index int, begin int, length int, peer *btnet.Peer) {
-	util.TPrintf("%s: in sendBlock\n", cl.port)
 	if !cl.PieceBitmap[index] {
 		util.TPrintf("%s: we don't have this piece\n", cl.port)
-		// we don't have this piece yet
 		return
 	}
 	if length != fs.BlockSize {
@@ -69,12 +56,12 @@ func (cl *BTClient) sendBlock(index int, begin int, length int, peer *btnet.Peer
 }
 
 func (cl *BTClient) saveBlock(index int, begin int, length int, block []byte) {
-	util.TPrintf("%s: in saveBlock\n", cl.port)
 	if begin%fs.BlockSize != 0 {
 		util.TPrintf("%s: not aligned with a block\n", cl.port)
 		return
 	}
 	blockIndex := begin / fs.BlockSize
+
 	util.TPrintf("%s: saving piece %d, block %d\n", cl.port, index, blockIndex)
 	cl.lock("peering/saveBlock")
 	if length < fs.BlockSize {
@@ -88,20 +75,16 @@ func (cl *BTClient) saveBlock(index int, begin int, length int, block []byte) {
 		cl.blockBitmap[index] = make([]bool, cl.numBlocks(index), cl.numBlocks(index))
 	}
 	cl.blockBitmap[index][blockIndex] = true
-	util.TPrintf("%s: bitmaps %v\n", cl.port, cl.blockBitmap)
 
 	if allTrue(cl.blockBitmap[index]) {
-		util.TPrintf("%s: got all blocks for piece\n", cl.port)
-
 		// hash and save piece
 		if cl.Pieces[index].Hash() != cl.torrentMeta.PieceHashes[index] {
-			util.WPrintf("%s: hash didn't match\n", cl.port)
-			util.WPrintf("%s: hash lengths: %d, %d", cl.port, len(cl.Pieces[index].Hash()), len(cl.torrentMeta.PieceHashes[index]))
+			util.WPrintf("%s: hashes didn't match - lengths: %d, %d", cl.port, len(cl.Pieces[index].Hash()), len(cl.torrentMeta.PieceHashes[index]))
 			delete(cl.blockBitmap, index)
 			cl.unlock("peering/saveBlock")
 			return
 		}
-		util.TPrintf("%s: saving piece\n", cl.port)
+		util.TPrintf("%s: saving piece %d\n", cl.port, index)
 		cl.PieceBitmap[index] = true
 		pieceBitmap := make([]bool, len(cl.PieceBitmap))
 		copy(pieceBitmap, cl.PieceBitmap)
@@ -111,9 +94,14 @@ func (cl *BTClient) saveBlock(index int, begin int, length int, block []byte) {
 	}
 	cl.unlock("peering/saveBlock")
 
-	for i := range cl.peers {
+	for _, addr := range cl.atomicGetPeerAddrs() {
 		// send have message
-		cl.sendHaveMessage(cl.peers[i], index, begin, length)
+		p, ok := cl.atomicGetPeer(addr)
+		if !ok {
+			util.EPrintf("%s: peer %s not found\n", cl.port, addr)
+		} else {
+			cl.sendHaveMessage(p, index, begin, length)
+		}
 	}
 }
 
@@ -133,7 +121,6 @@ func (cl *BTClient) sendRequestMessage(peer *btnet.Peer, index int, begin int, l
 		Index:  int32(index),
 		Begin:  begin,
 		Length: length}
-	// util.TPrintf("sending message - %v\n", message)
 	cl.SendPeerMessage(&peer.Addr, message)
 }
 
@@ -144,7 +131,6 @@ func (cl *BTClient) sendPieceMessage(peer *btnet.Peer, index int, begin int, len
 		Begin:  begin,
 		Length: length,
 		Block:  data}
-	// util.TPrintf("sending message - %v\n", message)
 	cl.SendPeerMessage(&peer.Addr, message)
 }
 
@@ -154,7 +140,6 @@ func (cl *BTClient) sendHaveMessage(peer *btnet.Peer, index int, begin int, leng
 		Index:  int32(index),
 		Begin:  begin,
 		Length: length}
-	// util.TPrintf("sending message - %v\n", message)
 	cl.SendPeerMessage(&peer.Addr, message)
 }
 
@@ -165,27 +150,19 @@ func (cl *BTClient) SetupPeerConnections(addr *net.TCPAddr, conn *net.TCPConn) {
 	infoHash := fs.GetInfoHash(fs.ReadTorrent(cl.torrentPath))
 	peerId := cl.peerId
 	bitfieldLength := cl.numPieces
-	// util.Printf("Grabbing SetupPeerConnections lock\n")
-	// util.Printf("Got SetupPeerConnections lock\n")
 	peer := btnet.InitializePeer(addr, infoHash, peerId, bitfieldLength, conn, cl.PieceBitmap)
 	if peer == nil {
 		// We got a bad handshake so drop the connection
 		return
 	}
-	cl.lock("peering/setup peer connnections 0")
-	cl.peers[addr.String()] = peer
-	cl.unlock("peering/setup peer connnections 0")
+	cl.atomicSetPeer(addr.String(), peer)
 
 	// Start go routine that handles the closing of the tcp connection if we dont
 	// get a keepAlive signal
 	// Separate go routine for sending keepalive signals
 	go func() {
 		for {
-			// util.Printf("Grabbing msgQueue lock\n")
-			// util.Printf("Got msgQueue lock\n")
 			if peer == nil || peer.Conn.RemoteAddr() == nil {
-				// util.Printf("Remote conncetion closed?\n")
-				// cl.mu.Unlock()
 				return
 			}
 			var msg btnet.PeerMessage
@@ -205,7 +182,6 @@ func (cl *BTClient) SetupPeerConnections(addr *net.TCPAddr, conn *net.TCPConn) {
 				// TODO: Not sure if this is the right way of checking this
 				util.WPrintf("err: %v\n", err)
 				if peer.Conn.RemoteAddr() != nil {
-					util.TPrintf("Closing the connection in peering/SetupPeerConnections\n")
 					peer.Conn.Close()
 				}
 				return
@@ -222,13 +198,9 @@ func (cl *BTClient) SetupPeerConnections(addr *net.TCPAddr, conn *net.TCPConn) {
 				// Do nothing, this is good
 			case <-time.After(peerTimeout):
 				if peer.Conn.RemoteAddr() != nil {
-					util.TPrintf("Closing the connection in peering keepalive loop\n")
 					peer.Conn.Close()
 				}
-				cl.lock("peering/keepalivetimeout")
-				util.WPrintf("KeepAliveTIMEOUT EXCEEDED port: %v\n", cl.port)
-				delete(cl.peers, peer.Addr.String())
-				cl.unlock("peering/keepalivetimeout")
+				cl.atomicDeletePeer(peer.Addr.String())
 				return
 			}
 		}
@@ -237,31 +209,28 @@ func (cl *BTClient) SetupPeerConnections(addr *net.TCPAddr, conn *net.TCPConn) {
 	// Start another go routine to read stuff from that channel
 	go func() {
 		if peer.Conn.RemoteAddr() == nil {
-			util.TPrintf("Connection Closed!\n")
+			util.TPrintf("Connection closed!\n")
 		} else {
-			util.TPrintf("Connection Alive!\n")
+			util.TPrintf("Connection alive!\n")
 		}
 		cl.messageHandler(&peer.Conn)
 	}()
 }
 
 func (cl *BTClient) SendPeerMessage(addr *net.TCPAddr, message btnet.PeerMessage) {
-	cl.lock("peering/sendPeerMessage")
-	peer, ok := cl.peers[addr.String()]
+	peer, ok := cl.atomicGetPeer(addr.String())
 	if !ok {
-		cl.unlock("peering/sendPeerMessage")
 		cl.SetupPeerConnections(addr, nil)
-		peer, ok = cl.peers[addr.String()]
+		peer, ok = cl.atomicGetPeer(addr.String())
 		if !ok {
-			util.WPrintf("Failed to establish a connection\n")
+			util.WPrintf("%d: failed to establish a connection with %s\n", cl.port, addr)
 			return
 		}
-		peer.MsgQueue <- message
-		return
+		//peer.MsgQueue <- message
+		//return
 	}
-
-	cl.unlock("peering/sendPeerMessage")
 	peer.MsgQueue <- message
+	return
 }
 
 func (cl *BTClient) messageHandler(conn *net.TCPConn) {
@@ -270,7 +239,7 @@ func (cl *BTClient) messageHandler(conn *net.TCPConn) {
 	if conn == nil || conn.RemoteAddr() == nil {
 		return
 	}
-	peer, ok := cl.peers[conn.RemoteAddr().String()]
+	peer, ok := cl.atomicGetPeer(conn.RemoteAddr().String())
 	if !ok {
 		// This internally calls messageHandler in a separate goRoutine
 		cl.SetupPeerConnections(conn.RemoteAddr().(*net.TCPAddr), conn)
@@ -297,17 +266,17 @@ func (cl *BTClient) messageHandler(conn *net.TCPConn) {
 		if !peerMessage.KeepAlive {
 			switch peerMessage.Type {
 			case btnet.Choke:
-				peer.Status.PeerChoking = true
+				peer.SetChoking(true)
 			case btnet.Unchoke:
-				peer.Status.PeerChoking = false
+				peer.SetChoking(false)
 			case btnet.Interested:
-				peer.Status.PeerInterested = true
+				peer.SetInterested(true)
 			case btnet.NotInterested:
-				peer.Status.PeerInterested = false
+				peer.SetInterested(false)
 			case btnet.Have:
-				peer.Bitfield[peerMessage.Index] = true
+				peer.SetBitfieldElement(peerMessage.Index, true)
 			case btnet.Bitfield:
-				peer.Bitfield = peerMessage.Bitfield
+				peer.SetBitfield(peerMessage.Bitfield)
 			case btnet.Request:
 				util.TPrintf("%s: received request msg\n", cl.port)
 				cl.sendBlock(int(peerMessage.Index), peerMessage.Begin, peerMessage.Length, peer)
@@ -319,7 +288,7 @@ func (cl *BTClient) messageHandler(conn *net.TCPConn) {
 				fallthrough
 			default:
 				// Unsupported message
-				util.TPrintf("%s: Unsupported message\n", cl.port)
+				util.WPrintf("%s: unsupported message\n", cl.port)
 				// Drop the connection
 				conn.Close()
 			}

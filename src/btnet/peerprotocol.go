@@ -4,6 +4,7 @@ import (
 	"bytes"
 	"encoding/binary"
 	"net"
+	"sync"
 	"util"
 )
 
@@ -51,12 +52,54 @@ type PeerStatus struct {
 }
 
 type Peer struct {
+	mu        sync.RWMutex
 	Status    PeerStatus
 	Bitfield  []bool
 	Addr      net.TCPAddr
 	Conn      net.TCPConn
 	MsgQueue  chan PeerMessage
 	KeepAlive chan bool
+}
+
+func (p *Peer) GetBitfield() []bool {
+	p.mu.RLock()
+	result := make([]bool, len(p.Bitfield))
+	copy(result, p.Bitfield)
+	defer p.mu.RUnlock()
+	return result
+}
+
+func (p *Peer) GetStatus() PeerStatus {
+	p.mu.RLock()
+	defer p.mu.RUnlock()
+	return p.Status
+}
+
+func (p *Peer) SetBitfield(arr []bool) {
+	p.mu.Lock()
+	defer p.mu.Unlock()
+	if len(arr) != len(p.Bitfield) {
+		panic("Bitfield lengths don't match")
+	}
+	copy(p.Bitfield, arr)
+}
+
+func (p *Peer) SetBitfieldElement(index int32, val bool) {
+	p.mu.Lock()
+	defer p.mu.Unlock()
+	p.Bitfield[index] = val
+}
+
+func (p *Peer) SetChoking(val bool) {
+	p.mu.Lock()
+	defer p.mu.Unlock()
+	p.Status.PeerChoking = val
+}
+
+func (p *Peer) SetInterested(val bool) {
+	p.mu.Lock()
+	defer p.mu.Unlock()
+	p.Status.PeerInterested = val
 }
 
 // Make sure to start a go routine to kill this connection
@@ -81,11 +124,11 @@ func InitializePeer(addr *net.TCPAddr, infoHash string, peerId string, bitfieldL
 	if conn != nil && conn.RemoteAddr() != nil {
 		// This happens if we are not the ones initializing the communication
 		data, err := ReadHandshake(conn)
-        if err != nil {
-            util.WPrintf("%s\n", err)
-            conn.Close()
-            return nil
-        }
+		if err != nil {
+			util.WPrintf("%s\n", err)
+			conn.Close()
+			return nil
+		}
 		handshake := DecodeHandshake(data)
 		// TODO: Process the handshake and drop connection if needed
 		if len(handshake.InfoHash) != 20 {
@@ -106,15 +149,15 @@ func InitializePeer(addr *net.TCPAddr, infoHash string, peerId string, bitfieldL
 		handshake := Handshake{Pstr: BT_PROTOCOL, InfoHash: []byte(infoHash), PeerId: []byte(peerId)}
 		data := EncodeHandshake(handshake)
 		// Sending data
-        util.TPrintf("Sending Handshake\n")
+		util.TPrintf("Sending Handshake\n")
 
 		conn, err := DoDial(addr, data)
-        if err != nil {
-            return nil
-        }
-        peer.Conn = *conn
+		if err != nil {
+			return nil
+		}
+		peer.Conn = *conn
 
-        message := PeerMessage{
+		message := PeerMessage{
 			Type:     Bitfield,
 			Bitfield: pieceBitmap}
 		util.TPrintf("Enqueuing bitfield message %v\n", pieceBitmap)

@@ -192,7 +192,6 @@ func (cl *BTClient) GetStatusString() (string, int) {
 }
 
 func (cl *BTClient) getRandomPeerOrder() []*btnet.Peer {
-	cl.lock("client/getRandomPeerOrder")
 	peerList := make([]*btnet.Peer, len(cl.peers))
 	order := rand.Perm(len(peerList))
 	i := 0
@@ -201,6 +200,43 @@ func (cl *BTClient) getRandomPeerOrder() []*btnet.Peer {
 		peerList[order[i]] = cl.peers[addr]
 		i += 1
 	}
-	cl.unlock("client/getRandomPeerOrder")
 	return peerList
+}
+
+func (cl *BTClient) atomicGetPeer(addr string) (*btnet.Peer, bool) {
+	cl.lock("client/atomicGetPeer")
+	p, ok := cl.peers[addr]
+	cl.unlock("client/atomicGetPeer")
+	return p, ok
+}
+
+func (cl *BTClient) atomicSetPeer(addr string, peer *btnet.Peer) {
+	cl.lock("client/atomicSetPeer")
+	cl.peers[addr] = peer
+	cl.unlock("client/atomicSetPeer")
+	return
+}
+
+func (cl *BTClient) atomicDeletePeer(addr string) {
+	cl.lock("client/atomicDeletePeer")
+	util.WPrintf("%d: keepalive timeout exceeded for %s\n", addr)
+	delete(cl.peers, addr)
+	cl.unlock("client/atomicDeletePeer")
+}
+
+func (cl *BTClient) atomicGetPeerAddrs() []string {
+	cl.lock("client/atomicGetPeerAddrs")
+	result := []string{}
+	for addr := range cl.peers {
+		result = append(result, addr)
+	}
+	cl.unlock("client/atomicGetPeerAddrs")
+	return result
+}
+
+func (cl *BTClient) atomicGetNumPeers() int {
+	cl.lock("client/atomicGetNumPeers")
+	num := len(cl.peers)
+	cl.unlock("client/atomicGetNumPeers")
+	return num
 }
