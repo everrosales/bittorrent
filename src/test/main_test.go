@@ -43,8 +43,8 @@ func TestTwoClients(t *testing.T) {
 	seed := SeedFileSmall
 	output := "out/puppy_download1.jpg"
 
-	seederPersister := btclient.MakePersister("out/test1")
-	downloaderPersister := btclient.MakePersister("out/test2")
+	seederPersister := btclient.MakePersister("out/test1_1")
+	downloaderPersister := btclient.MakePersister("out/test1_2")
 
 	tr := bttracker.StartBTTracker(file, 8000)
 	seeder := btclient.StartBTClient("localhost", 6666, file, seed, "", seederPersister)
@@ -92,9 +92,9 @@ func TestThreeClients(t *testing.T) {
 	output1 := "out/puppy_download2.jpg"
 	output2 := "out/puppy_download3.jpg"
 
-	seederPersister := btclient.MakePersister("out/test1")
-	downloaderPersister := btclient.MakePersister("out/test2")
-	downloaderPersister2 := btclient.MakePersister("out/test3")
+	seederPersister := btclient.MakePersister("out/test2_1")
+	downloaderPersister := btclient.MakePersister("out/test2_2")
+	downloaderPersister2 := btclient.MakePersister("out/test2_3")
 
 	tr := bttracker.StartBTTracker(file, 8000)
 	seeder := btclient.StartBTClient("localhost", 6668, file, seed, "", seederPersister)
@@ -162,8 +162,8 @@ func TestTwoClientsLargeFile(t *testing.T) {
 	seed := SeedFileLarge
 	output := "out/pupper_download1.jpg"
 
-	seederPersister := btclient.MakePersister("out/test1")
-	downloaderPersister := btclient.MakePersister("out/test2")
+	seederPersister := btclient.MakePersister("out/test3_1")
+	downloaderPersister := btclient.MakePersister("out/test3_2")
 
 	tr := bttracker.StartBTTracker(file, 8001)
 	seeder := btclient.StartBTClient("localhost", 6671, file, seed, "", seederPersister)

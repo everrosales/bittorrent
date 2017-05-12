@@ -1,8 +1,8 @@
 package btclient
 
 import (
-	"util"
 	"time"
+	"util"
 )
 
 func (cl *BTClient) downloadPiece(piece int) {
@@ -64,7 +64,7 @@ func (cl *BTClient) waitUntilDownloaded(piece int) {
 	}()
 
 	select {
-	case <- downloaded:
-	case <- time.After(time.Millisecond * 500):
+	case <-downloaded:
+	case <-time.After(time.Millisecond * 500):
 	}
 }

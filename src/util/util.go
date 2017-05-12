@@ -158,21 +158,21 @@ func BoolArrayEquals(first []bool, second []bool) bool {
 // split a string into an array of strings of length n, where the last string
 // might be truncated
 func SplitEveryN(str string, n int) []string {
-    slicesLen := len(str) / n
-    if (len(str) % n != 0) {
-        slicesLen += 1
-    }
-    lastIndex := 0
+	slicesLen := len(str) / n
+	if len(str)%n != 0 {
+		slicesLen += 1
+	}
+	lastIndex := 0
 	slices := make([]string, slicesLen)
 	// lastIndex := 0
-    for i:=0; i<slicesLen; i++ {
-    	if i == slicesLen-1 {
-    		slices[i] = str[lastIndex:]
-    	} else {
-    		slices[i] = str[i*n : i*n+n]
-    		lastIndex = i*n+n
-    	}
-    }
+	for i := 0; i < slicesLen; i++ {
+		if i == slicesLen-1 {
+			slices[i] = str[lastIndex:]
+		} else {
+			slices[i] = str[i*n : i*n+n]
+			lastIndex = i*n + n
+		}
+	}
 	return slices
 }
 

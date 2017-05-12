@@ -76,7 +76,7 @@ func Read(path string) Metadata {
 	metadata.Name = torrent.Info["name"].(string)
 	metadata.PieceLen, _ = torrent.Info["piece length"].(int64)
 	metadata.PieceHashes = util.SplitEveryN(torrent.Info["pieces"].(string), 20)
-    if _, ok := torrent.Info["length"]; ok {
+	if _, ok := torrent.Info["length"]; ok {
 		// single file
 		metadata.Files = []FileData{
 			FileData{

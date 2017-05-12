@@ -13,7 +13,6 @@ import (
 
 // TODO: fix error with stopping tracker contact
 // TODO: pruning client's peer list when tracker says that peer is down
-// TODO: run with -race and remove ALL RACES
 
 const NumDownloaders int = 5
 
@@ -189,54 +188,4 @@ func (cl *BTClient) GetStatusString() (string, int) {
 	bitfield, lines := util.BitfieldToString(cl.PieceBitmap, 40)
 	output += bitfield + "\n"
 	return output, lines + 2
-}
-
-func (cl *BTClient) getRandomPeerOrder() []*btnet.Peer {
-	peerList := make([]*btnet.Peer, len(cl.peers))
-	order := rand.Perm(len(peerList))
-	i := 0
-	// create a list of peers in random order
-	for addr := range cl.peers {
-		peerList[order[i]] = cl.peers[addr]
-		i += 1
-	}
-	return peerList
-}
-
-func (cl *BTClient) atomicGetPeer(addr string) (*btnet.Peer, bool) {
-	cl.lock("client/atomicGetPeer")
-	p, ok := cl.peers[addr]
-	cl.unlock("client/atomicGetPeer")
-	return p, ok
-}
-
-func (cl *BTClient) atomicSetPeer(addr string, peer *btnet.Peer) {
-	cl.lock("client/atomicSetPeer")
-	cl.peers[addr] = peer
-	cl.unlock("client/atomicSetPeer")
-	return
-}
-
-func (cl *BTClient) atomicDeletePeer(addr string) {
-	cl.lock("client/atomicDeletePeer")
-	util.WPrintf("%d: keepalive timeout exceeded for %s\n", addr)
-	delete(cl.peers, addr)
-	cl.unlock("client/atomicDeletePeer")
-}
-
-func (cl *BTClient) atomicGetPeerAddrs() []string {
-	cl.lock("client/atomicGetPeerAddrs")
-	result := []string{}
-	for addr := range cl.peers {
-		result = append(result, addr)
-	}
-	cl.unlock("client/atomicGetPeerAddrs")
-	return result
-}
-
-func (cl *BTClient) atomicGetNumPeers() int {
-	cl.lock("client/atomicGetNumPeers")
-	num := len(cl.peers)
-	cl.unlock("client/atomicGetNumPeers")
-	return num
 }

@@ -6,7 +6,6 @@ import (
 	"net"
 	"sync"
 	"util"
-    "sync"
 )
 
 const BT_PROTOCOL string = "BitTorrent protocol"
@@ -53,66 +52,65 @@ type PeerStatus struct {
 }
 
 type Peer struct {
-	mu        sync.RWMutex
-	Status    PeerStatus
-	Bitfield  []bool
-	Addr      net.TCPAddr
-	Conn      net.TCPConn
-    MsgQueueMu  sync.Mutex
-    MsgQueueSet  map[PeerMessageId]bool
-    // MsgPieceSet  map[uint64]bool
+	mu          sync.RWMutex
+	Status      PeerStatus
+	Bitfield    []bool
+	Addr        net.TCPAddr
+	Conn        net.TCPConn
+	MsgQueueMu  sync.Mutex
+	MsgQueueSet map[PeerMessageId]bool
+	// MsgPieceSet  map[uint64]bool
 	MsgQueue  chan PeerMessage
 	KeepAlive chan bool
 }
 
 type PeerMessageId struct {
-    Type MessageType
-    Index int32
-    Begin int
-    Length int
+	Type   MessageType
+	Index  int32
+	Begin  int
+	Length int
 }
 
 func (msg *PeerMessage) Hash() PeerMessageId {
-    return PeerMessageId{Type: msg.Type, Index: msg.Index, Begin: msg.Begin, Length: msg.Length}
+	return PeerMessageId{Type: msg.Type, Index: msg.Index, Begin: msg.Begin, Length: msg.Length}
 }
 
-
 func (peer *Peer) AddToMessageQueue(message PeerMessage) {
-    if message.Type == Request || message.Type == Piece {
-        hash := message.Hash()
-        peer.MsgQueueMu.Lock()
-        _, ok := peer.MsgQueueSet[hash]
-        if !ok {
-            peer.MsgQueueSet[hash] = true
-            peer.MsgQueueMu.Unlock()
-            peer.MsgQueue <- message
-            return
-        }
-        peer.MsgQueueMu.Unlock()
-        return
-    }
-    // peer.MsgQueueMu.Unlock()
-    peer.MsgQueue <- message
-    return
+	if message.Type == Request || message.Type == Piece {
+		hash := message.Hash()
+		peer.MsgQueueMu.Lock()
+		_, ok := peer.MsgQueueSet[hash]
+		if !ok {
+			peer.MsgQueueSet[hash] = true
+			peer.MsgQueueMu.Unlock()
+			peer.MsgQueue <- message
+			return
+		}
+		peer.MsgQueueMu.Unlock()
+		return
+	}
+	// peer.MsgQueueMu.Unlock()
+	peer.MsgQueue <- message
+	return
 }
 
 func (peer *Peer) MarkMessageSent(message PeerMessage) {
-    if message.Type == Request || message.Type == Piece {
-        hash := message.Hash()
-        peer.MsgQueueMu.Lock()
-        _, ok := peer.MsgQueueSet[hash]
-        if ok {
-            delete(peer.MsgQueueSet, hash)
-            peer.MsgQueueMu.Unlock()
-            return
-        } else {
-            panic("wtf")
-        }
-        peer.MsgQueueMu.Unlock()
-        return
-    }
-    // peer.MsgQueueMu.Unlock()
-    return
+	if message.Type == Request || message.Type == Piece {
+		hash := message.Hash()
+		peer.MsgQueueMu.Lock()
+		_, ok := peer.MsgQueueSet[hash]
+		if ok {
+			delete(peer.MsgQueueSet, hash)
+			peer.MsgQueueMu.Unlock()
+			return
+		} else {
+			panic("wtf")
+		}
+		peer.MsgQueueMu.Unlock()
+		return
+	}
+	// peer.MsgQueueMu.Unlock()
+	return
 }
 
 func (p *Peer) GetBitfield() []bool {
@@ -165,7 +163,7 @@ func InitializePeer(addr *net.TCPAddr, infoHash string, peerId string, bitfieldL
 	//   return peer
 	// }
 	// peer.Addr = *tcpAddr
-    peer.MsgQueueSet = make(map[PeerMessageId]bool)
+	peer.MsgQueueSet = make(map[PeerMessageId]bool)
 	peer.Addr = *addr
 	peer.Bitfield = make([]bool, bitfieldLength)
 	peer.Status.AmChoking = false
@@ -198,7 +196,7 @@ func InitializePeer(addr *net.TCPAddr, infoHash string, peerId string, bitfieldL
 			Bitfield: pieceBitmap}
 		util.TPrintf("Enqueuing bitfield message %v\n", pieceBitmap)
 		// peer.MsgQueue <- message
-        peer.AddToMessageQueue(message)
+		peer.AddToMessageQueue(message)
 		// cl.SendPeerMessage(&peer.Addr, message)
 		peer.Conn = *conn
 	} else {
@@ -218,7 +216,7 @@ func InitializePeer(addr *net.TCPAddr, infoHash string, peerId string, bitfieldL
 			Bitfield: pieceBitmap}
 		util.TPrintf("Enqueuing bitfield message %v\n", pieceBitmap)
 		// peer.MsgQueue <- message
-        peer.AddToMessageQueue(message)
+		peer.AddToMessageQueue(message)
 		// Read bitfield message that gets sent back
 	}
 

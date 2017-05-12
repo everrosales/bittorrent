@@ -166,20 +166,20 @@ func (cl *BTClient) SetupPeerConnections(addr *net.TCPAddr, conn *net.TCPConn) {
 				return
 			}
 			var msg btnet.PeerMessage
-            select {
-            case msg = <-peer.MsgQueue:
-                // newMessage = cl.checkIfPending(msg)
-                util.TPrintf("Received message from msgqueue - Type: %v\n", msg.Type)
-            case <-time.After(peerTimeout / 3):
-                msg = btnet.PeerMessage{KeepAlive: true}
-            }
+			select {
+			case msg = <-peer.MsgQueue:
+				// newMessage = cl.checkIfPending(msg)
+				util.TPrintf("Received message from msgqueue - Type: %v\n", msg.Type)
+			case <-time.After(peerTimeout / 3):
+				msg = btnet.PeerMessage{KeepAlive: true}
+			}
 
 			data := btnet.EncodePeerMessage(msg)
 			util.TPrintf("Sending encoded message from: %v, to: %v, type: %v\n",
 				peer.Conn.LocalAddr().String(), peer.Conn.RemoteAddr().String(), msg.Type)
 
 			_, err := peer.Conn.Write(data)
-            peer.MarkMessageSent(msg)
+			peer.MarkMessageSent(msg)
 			if err != nil {
 				// Connection is probably closed
 				// TODO: Not sure if this is the right way of checking this
@@ -232,8 +232,8 @@ func (cl *BTClient) SendPeerMessage(addr *net.TCPAddr, message btnet.PeerMessage
 	}
 
 	// peer.MsgQueue <- message
-    peer.AddToMessageQueue(message)
-    return
+	peer.AddToMessageQueue(message)
+	return
 }
 
 func (cl *BTClient) messageHandler(conn *net.TCPConn) {
