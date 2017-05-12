@@ -176,9 +176,11 @@ func (cl *BTClient) SetupPeerConnections(addr *net.TCPAddr, conn *net.TCPConn) {
                 if msg.Expired() {
                     // Message queue is backed up...
                     // Dump the whole thing
+                    peer.MsgQueueMu.Lock()
                     util.EPrintf("\n\n\nDUMPING MESSAGE QUEUE: %d\n", len(peer.MsgQueue))
                     peer.MsgQueue = make(chan btnet.PeerMessage, len(peer.MsgQueue))
                     peer.MsgQueueSet = make(map[btnet.PeerMessageId]bool)
+                    peer.MsgQueueMu.Unlock()
                     // msgok = true
                 }
 				util.TPrintf("Received message from msgqueue - Type: %v\n", msg.Type)

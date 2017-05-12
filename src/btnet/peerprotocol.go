@@ -32,7 +32,7 @@ const (
 	Cancel                           // 8
 )
 
-const MessageTTL = 1
+const MessageTTL = 3
 
 type PeerMessage struct {
 	Type     MessageType
@@ -130,22 +130,22 @@ func (peer *Peer) MarkMessageSent(message PeerMessage) {
 }
 
 func (p *Peer) GetBitfield() []bool {
-	// p.mu.RLock()
+	p.mu.RLock()
 	result := make([]bool, len(p.Bitfield))
 	copy(result, p.Bitfield)
-	// defer p.mu.RUnlock()
+	defer p.mu.RUnlock()
 	return result
 }
 
 func (p *Peer) GetStatus() PeerStatus {
-	// p.mu.RLock()
-	// defer p.mu.RUnlock()
+	p.mu.RLock()
+	defer p.mu.RUnlock()
 	return p.Status
 }
 
 func (p *Peer) SetBitfield(arr []bool) {
-	// p.mu.Lock()
-	// defer p.mu.Unlock()
+	p.mu.Lock()
+	defer p.mu.Unlock()
 	if len(arr) != len(p.Bitfield) {
 		panic("Bitfield lengths don't match")
 	}
@@ -153,20 +153,20 @@ func (p *Peer) SetBitfield(arr []bool) {
 }
 
 func (p *Peer) SetBitfieldElement(index int32, val bool) {
-	// p.mu.Lock()
-	// defer p.mu.Unlock()
+	p.mu.Lock()
+	defer p.mu.Unlock()
 	p.Bitfield[index] = val
 }
 
 func (p *Peer) SetChoking(val bool) {
-	// p.mu.Lock()
-	// defer p.mu.Unlock()
+	p.mu.Lock()
+	defer p.mu.Unlock()
 	p.Status.PeerChoking = val
 }
 
 func (p *Peer) SetInterested(val bool) {
-	// p.mu.Lock()
-	// defer p.mu.Unlock()
+	p.mu.Lock()
+	defer p.mu.Unlock()
 	p.Status.PeerInterested = val
 }
 

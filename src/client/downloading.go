@@ -36,7 +36,7 @@ func (cl *BTClient) downloadPieces() {
 		}
 		cl.unlock("downloading/downloadPieces 1")
 
-		// cl.waitUntilDownloaded(piece)
+		cl.waitUntilDownloaded(piece)
 
 		cl.lock("downloading/downloadPieces 2")
 		if !cl.PieceBitmap[piece] {
@@ -53,12 +53,11 @@ func (cl *BTClient) downloadPieces() {
 
 func (cl *BTClient) waitUntilDownloaded(piece int) {
 	downloaded := make(chan bool, 1)
-    // done := false
 	go func() {
 		for {
-			// cl.lock("downloading/waitUntilDownloaded")
+			cl.lock("downloading/waitUntilDownloaded")
 			done := cl.PieceBitmap[piece]
-			// cl.unlock("downloading/waitUntilDownloaded")
+			cl.unlock("downloading/waitUntilDownloaded")
 			if done {
                 downloaded <- true
 				return
@@ -71,6 +70,5 @@ func (cl *BTClient) waitUntilDownloaded(piece int) {
 	select {
 	case <-downloaded:
 	case <-time.After(time.Millisecond * 100):
-        // done = true
 	}
 }
