@@ -6,6 +6,7 @@ import (
 	"net"
 	"sync"
 	"util"
+    "time"
 )
 
 const BT_PROTOCOL string = "BitTorrent protocol"
@@ -31,6 +32,8 @@ const (
 	Cancel                           // 8
 )
 
+const MessageTTL = 1
+
 type PeerMessage struct {
 	Type     MessageType
 	Index    int32
@@ -42,6 +45,7 @@ type PeerMessage struct {
 	BlockLength int
 	// Zero length messages are keep alive messages and have no type
 	KeepAlive bool
+    Timestamp time.Time
 }
 
 type PeerStatus struct {
@@ -60,6 +64,7 @@ type Peer struct {
 	MsgQueueMu  sync.Mutex
 	MsgQueueSet map[PeerMessageId]bool
 	// MsgPieceSet  map[uint64]bool
+    MsgPriorityQueue chan PeerMessage
 	MsgQueue  chan PeerMessage
 	KeepAlive chan bool
 }
@@ -75,6 +80,17 @@ func (msg *PeerMessage) Hash() PeerMessageId {
 	return PeerMessageId{Type: msg.Type, Index: msg.Index, Begin: msg.Begin, Length: msg.Length}
 }
 
+func (msg *PeerMessage) Expired() bool {
+    // util.EPrintf("%v\n", time.Now().Sub(msg.Timestamp))
+    // util.EPrintf("%v\n", time.Now().Sub(msg.Timestamp) > (time.Second * MessageTTL))
+    // util.EPrintf("%v\n", msg)
+    if (time.Now().Sub(msg.Timestamp) > (time.Second * MessageTTL)) {
+        return true
+
+    }
+    return false
+}
+
 func (peer *Peer) AddToMessageQueue(message PeerMessage) {
 	if message.Type == Request || message.Type == Piece {
 		hash := message.Hash()
@@ -83,6 +99,7 @@ func (peer *Peer) AddToMessageQueue(message PeerMessage) {
 		if !ok {
 			peer.MsgQueueSet[hash] = true
 			peer.MsgQueueMu.Unlock()
+            message.Timestamp = time.Now()
 			peer.MsgQueue <- message
 			return
 		}
@@ -90,7 +107,8 @@ func (peer *Peer) AddToMessageQueue(message PeerMessage) {
 		return
 	}
 	// peer.MsgQueueMu.Unlock()
-	peer.MsgQueue <- message
+    message.Timestamp = time.Now()
+	peer.MsgPriorityQueue <- message
 	return
 }
 
@@ -103,8 +121,6 @@ func (peer *Peer) MarkMessageSent(message PeerMessage) {
 			delete(peer.MsgQueueSet, hash)
 			peer.MsgQueueMu.Unlock()
 			return
-		} else {
-			panic("wtf")
 		}
 		peer.MsgQueueMu.Unlock()
 		return
@@ -114,22 +130,22 @@ func (peer *Peer) MarkMessageSent(message PeerMessage) {
 }
 
 func (p *Peer) GetBitfield() []bool {
-	p.mu.RLock()
+	// p.mu.RLock()
 	result := make([]bool, len(p.Bitfield))
 	copy(result, p.Bitfield)
-	defer p.mu.RUnlock()
+	// defer p.mu.RUnlock()
 	return result
 }
 
 func (p *Peer) GetStatus() PeerStatus {
-	p.mu.RLock()
-	defer p.mu.RUnlock()
+	// p.mu.RLock()
+	// defer p.mu.RUnlock()
 	return p.Status
 }
 
 func (p *Peer) SetBitfield(arr []bool) {
-	p.mu.Lock()
-	defer p.mu.Unlock()
+	// p.mu.Lock()
+	// defer p.mu.Unlock()
 	if len(arr) != len(p.Bitfield) {
 		panic("Bitfield lengths don't match")
 	}
@@ -137,20 +153,20 @@ func (p *Peer) SetBitfield(arr []bool) {
 }
 
 func (p *Peer) SetBitfieldElement(index int32, val bool) {
-	p.mu.Lock()
-	defer p.mu.Unlock()
+	// p.mu.Lock()
+	// defer p.mu.Unlock()
 	p.Bitfield[index] = val
 }
 
 func (p *Peer) SetChoking(val bool) {
-	p.mu.Lock()
-	defer p.mu.Unlock()
+	// p.mu.Lock()
+	// defer p.mu.Unlock()
 	p.Status.PeerChoking = val
 }
 
 func (p *Peer) SetInterested(val bool) {
-	p.mu.Lock()
-	defer p.mu.Unlock()
+	// p.mu.Lock()
+	// defer p.mu.Unlock()
 	p.Status.PeerInterested = val
 }
 
@@ -170,7 +186,8 @@ func InitializePeer(addr *net.TCPAddr, infoHash string, peerId string, bitfieldL
 	peer.Status.AmInterested = false
 	peer.Status.PeerChoking = false
 	peer.Status.PeerInterested = false
-	peer.MsgQueue = make(chan PeerMessage, 200)
+	peer.MsgQueue = make(chan PeerMessage, 50)
+    peer.MsgPriorityQueue = make(chan PeerMessage, 50)
 	peer.KeepAlive = make(chan bool, 100)
 	// Create handshake
 	// Handshake{Pstr: BT_PROTOCOL, InfoHash: []byte(infoHash), PeerId: []byte(peerId)}

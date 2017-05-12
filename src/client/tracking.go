@@ -35,8 +35,10 @@ func (cl *BTClient) trackerHeartbeat() {
 			return
 		}
 		res := cl.contactTracker(cl.torrentMeta.TrackerUrl)
+        util.EPrintf("\n\n\nContacting Tracker/ contacted tracker!\n\n")
 		go func() {
 			for _, p := range res.Peers {
+                util.EPrintf("\npeerthings len:%d\n", len(res.Peers))
 				util.TPrintf("%s: peerId %s, ip %s, port %s\n", cl.port, p["peer id"], p["ip"], p["port"])
 				addr, err := net.ResolveTCPAddr("tcp", p["ip"]+":"+p["port"])
 				if err != nil {

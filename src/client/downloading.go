@@ -5,6 +5,8 @@ import (
 	"util"
 )
 
+const pieceDownloadWait = 500
+
 func (cl *BTClient) downloadPiece(piece int) {
 	cl.lock("downloader/downloadPiece")
 	if _, ok := cl.blockBitmap[piece]; !ok {
@@ -34,13 +36,14 @@ func (cl *BTClient) downloadPieces() {
 		}
 		cl.unlock("downloading/downloadPieces 1")
 
-		cl.waitUntilDownloaded(piece)
+		// cl.waitUntilDownloaded(piece)
 
 		cl.lock("downloading/downloadPieces 2")
 		if !cl.PieceBitmap[piece] {
 			util.TPrintf("%s: piece %d was not downloaded\n", cl.port, piece)
 			// piece still not downloaded, add it back to queue
 			go func() {
+                util.Wait(pieceDownloadWait)
 				cl.neededPieces <- piece
 			}()
 		}
@@ -50,21 +53,24 @@ func (cl *BTClient) downloadPieces() {
 
 func (cl *BTClient) waitUntilDownloaded(piece int) {
 	downloaded := make(chan bool, 1)
+    // done := false
 	go func() {
 		for {
-			cl.lock("downloading/waitUntilDownloaded")
+			// cl.lock("downloading/waitUntilDownloaded")
 			done := cl.PieceBitmap[piece]
-			cl.unlock("downloading/waitUntilDownloaded")
+			// cl.unlock("downloading/waitUntilDownloaded")
 			if done {
-				downloaded <- true
+                downloaded <- true
 				return
 			}
 			util.Wait(10)
 		}
+
 	}()
 
 	select {
 	case <-downloaded:
-	case <-time.After(time.Millisecond * 500):
+	case <-time.After(time.Millisecond * 100):
+        // done = true
 	}
 }

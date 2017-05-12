@@ -69,7 +69,7 @@ func StartBTClient(ip string, port int, metadataPath string, seedPath string, ou
 
 	cl.numPieces = len(cl.torrentMeta.PieceHashes)
 	cl.blockBitmap = make(map[int][]bool)
-	cl.neededPieces = make(chan int, 100)
+	cl.neededPieces = make(chan int, 30)
 	cl.Pieces = make([]fs.Piece, cl.numPieces, cl.numPieces)
 	for i := range cl.Pieces {
 		piece := &cl.Pieces[i]

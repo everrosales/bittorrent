@@ -166,14 +166,27 @@ func (cl *BTClient) SetupPeerConnections(addr *net.TCPAddr, conn *net.TCPConn) {
 				return
 			}
 			var msg btnet.PeerMessage
-			select {
+            // msgok := false
+			// for !msgok {
+            select {
+            case msg = <-peer.MsgPriorityQueue:
+
 			case msg = <-peer.MsgQueue:
 				// newMessage = cl.checkIfPending(msg)
+                if msg.Expired() {
+                    // Message queue is backed up...
+                    // Dump the whole thing
+                    util.EPrintf("\n\n\nDUMPING MESSAGE QUEUE: %d\n", len(peer.MsgQueue))
+                    peer.MsgQueue = make(chan btnet.PeerMessage, len(peer.MsgQueue))
+                    peer.MsgQueueSet = make(map[btnet.PeerMessageId]bool)
+                    // msgok = true
+                }
 				util.TPrintf("Received message from msgqueue - Type: %v\n", msg.Type)
 			case <-time.After(peerTimeout / 3):
 				msg = btnet.PeerMessage{KeepAlive: true}
-			}
-
+                // msgok = true
+            }
+            // }
 			data := btnet.EncodePeerMessage(msg)
 			util.TPrintf("Sending encoded message from: %v, to: %v, type: %v\n",
 				peer.Conn.LocalAddr().String(), peer.Conn.RemoteAddr().String(), msg.Type)
@@ -232,6 +245,7 @@ func (cl *BTClient) SendPeerMessage(addr *net.TCPAddr, message btnet.PeerMessage
 	}
 
 	// peer.MsgQueue <- message
+    message.Timestamp = time.Now()
 	peer.AddToMessageQueue(message)
 	return
 }
