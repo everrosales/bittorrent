@@ -35,7 +35,7 @@ func (cl *BTClient) requestBlock(piece int, block int) {
 	util.TPrintf("%s: want to request block, current peers %v\n", cl.port, cl.peers)
 	peerList := cl.getRandomPeerOrder()
 	for _, peer := range peerList {
-		util.TPrintf("%s: peer bitfield: %v\n", cl.port, peer.Bitfield)
+		// util.TPrintf("%s: peer bitfield: %v\n", cl.port, peer.Bitfield)
 		if peer.Bitfield[piece] && !peer.Status.PeerChoking {
 			util.TPrintf("%s: requesting piece %d block %d from peer %s\n", cl.port, piece, block, peer.Addr)
 			begin := block * fs.BlockSize
@@ -193,17 +193,20 @@ func (cl *BTClient) SetupPeerConnections(addr *net.TCPAddr, conn *net.TCPConn) {
 				return
 			}
 			var msg btnet.PeerMessage
-			select {
-			case msg = <-peer.MsgQueue:
-				util.TPrintf("Received message from msgqueue - Type: %v\n", msg.Type)
-			case <-time.After(peerTimeout / 3):
-				msg = btnet.PeerMessage{KeepAlive: true}
-			}
+            select {
+            case msg = <-peer.MsgQueue:
+                // newMessage = cl.checkIfPending(msg)
+                util.TPrintf("Received message from msgqueue - Type: %v\n", msg.Type)
+            case <-time.After(peerTimeout / 3):
+                msg = btnet.PeerMessage{KeepAlive: true}
+            }
+
 			data := btnet.EncodePeerMessage(msg)
 			util.TPrintf("Sending encoded message from: %v, to: %v, type: %v\n",
 			peer.Conn.LocalAddr().String(), peer.Conn.RemoteAddr().String(), msg.Type)
 
 			_, err := peer.Conn.Write(data)
+            peer.MarkMessageSent(msg)
 			if err != nil {
 				// Connection is probably closed
 				// TODO: Not sure if this is the right way of checking this
@@ -260,12 +263,14 @@ func (cl *BTClient) SendPeerMessage(addr *net.TCPAddr, message btnet.PeerMessage
 			util.WPrintf("Failed to establish a connection\n")
 			return
 		}
-		peer.MsgQueue <- message
+        // peer.MsgQueue <- message
+        peer.AddToMessageQueue(message)
 		return
 	}
 
 	cl.unlock("peering/sendPeerMessage")
-	peer.MsgQueue <- message
+	// peer.MsgQueue <- message
+    peer.AddToMessageQueue(message)
 }
 
 func (cl *BTClient) messageHandler(conn *net.TCPConn) {

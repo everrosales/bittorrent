@@ -65,6 +65,6 @@ func (cl *BTClient) waitUntilDownloaded(piece int) {
 
 	select {
 	case <- downloaded:
-	case <- time.After(time.Millisecond * 200):
+	case <- time.After(time.Millisecond * 500):
 	}
 }

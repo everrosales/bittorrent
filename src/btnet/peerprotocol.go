@@ -5,6 +5,7 @@ import (
 	"encoding/binary"
 	"net"
 	"util"
+    "sync"
 )
 
 const BT_PROTOCOL string = "BitTorrent protocol"
@@ -55,8 +56,61 @@ type Peer struct {
 	Bitfield  []bool
 	Addr      net.TCPAddr
 	Conn      net.TCPConn
+    MsgQueueMu  sync.Mutex
+    MsgQueueSet  map[PeerMessageId]bool
+    // MsgPieceSet  map[uint64]bool
 	MsgQueue  chan PeerMessage
 	KeepAlive chan bool
+}
+
+type PeerMessageId struct {
+    Type MessageType
+    Index int32
+    Begin int
+    Length int
+}
+
+func (msg *PeerMessage) Hash() PeerMessageId {
+    return PeerMessageId{Type: msg.Type, Index: msg.Index, Begin: msg.Begin, Length: msg.Length}
+}
+
+
+func (peer *Peer) AddToMessageQueue(message PeerMessage) {
+    if message.Type == Request || message.Type == Piece {
+        hash := message.Hash()
+        peer.MsgQueueMu.Lock()
+        _, ok := peer.MsgQueueSet[hash]
+        if !ok {
+            peer.MsgQueueSet[hash] = true
+            peer.MsgQueueMu.Unlock()
+            peer.MsgQueue <- message
+            return
+        }
+        peer.MsgQueueMu.Unlock()
+        return
+    }
+    // peer.MsgQueueMu.Unlock()
+    peer.MsgQueue <- message
+    return
+}
+
+func (peer *Peer) MarkMessageSent(message PeerMessage) {
+    if message.Type == Request || message.Type == Piece {
+        hash := message.Hash()
+        peer.MsgQueueMu.Lock()
+        _, ok := peer.MsgQueueSet[hash]
+        if ok {
+            delete(peer.MsgQueueSet, hash)
+            peer.MsgQueueMu.Unlock()
+            return
+        } else {
+            panic("wtf")
+        }
+        peer.MsgQueueMu.Unlock()
+        return
+    }
+    // peer.MsgQueueMu.Unlock()
+    return
 }
 
 // Make sure to start a go routine to kill this connection
@@ -68,13 +122,14 @@ func InitializePeer(addr *net.TCPAddr, infoHash string, peerId string, bitfieldL
 	//   return peer
 	// }
 	// peer.Addr = *tcpAddr
+    peer.MsgQueueSet = make(map[PeerMessageId]bool)
 	peer.Addr = *addr
 	peer.Bitfield = make([]bool, bitfieldLength)
 	peer.Status.AmChoking = false
 	peer.Status.AmInterested = false
 	peer.Status.PeerChoking = false
 	peer.Status.PeerInterested = false
-	peer.MsgQueue = make(chan PeerMessage, 100)
+	peer.MsgQueue = make(chan PeerMessage, 200)
 	peer.KeepAlive = make(chan bool, 100)
 	// Create handshake
 	// Handshake{Pstr: BT_PROTOCOL, InfoHash: []byte(infoHash), PeerId: []byte(peerId)}
@@ -99,7 +154,8 @@ func InitializePeer(addr *net.TCPAddr, infoHash string, peerId string, bitfieldL
 			Type:     Bitfield,
 			Bitfield: pieceBitmap}
 		util.TPrintf("Enqueuing bitfield message %v\n", pieceBitmap)
-		peer.MsgQueue <- message
+		// peer.MsgQueue <- message
+        peer.AddToMessageQueue(message)
 		// cl.SendPeerMessage(&peer.Addr, message)
 		peer.Conn = *conn
 	} else {
@@ -118,7 +174,8 @@ func InitializePeer(addr *net.TCPAddr, infoHash string, peerId string, bitfieldL
 			Type:     Bitfield,
 			Bitfield: pieceBitmap}
 		util.TPrintf("Enqueuing bitfield message %v\n", pieceBitmap)
-		peer.MsgQueue <- message
+		// peer.MsgQueue <- message
+        peer.AddToMessageQueue(message)
 		// Read bitfield message that gets sent back
 	}
 
