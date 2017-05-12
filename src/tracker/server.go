@@ -100,6 +100,8 @@ func IndexHandler(tr *BTTracker, w http.ResponseWriter, r *http.Request) (int, e
 	return writeSuccess(w, DefaultInterval, peers)
 }
 
+
+// TODO: Create a debug=Status for the tracker
 func (tr *BTTracker) main(port int) {
 	portStr := ":" + strconv.Itoa(port)
 

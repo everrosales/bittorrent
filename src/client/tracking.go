@@ -35,7 +35,7 @@ func (cl *BTClient) trackerHeartbeat() {
 			return
 		}
 		res := cl.contactTracker(cl.torrentMeta.TrackerUrl)
-		for _, p := range res.Peers {
+        for _, p := range res.Peers {
 			util.TPrintf("%s: peerId %s, ip %s, port %s\n", cl.port, p["peer id"], p["ip"], p["port"])
 			addr, err := net.ResolveTCPAddr("tcp", p["ip"]+":"+p["port"])
 			if err != nil {
@@ -49,9 +49,7 @@ func (cl *BTClient) trackerHeartbeat() {
 			}
 		}
 		cl.lock("tracking/trackerHeartbeat")
-		// wait := cl.heartbeatInterval * 1000
-        // TODO: fix the heartbeatInterval
-        wait := 2000
+		wait := cl.heartbeatInterval * 1000
         cl.unlock("tracking/trackerHeartbeat")
 		util.Wait(wait)
 	}

@@ -271,7 +271,7 @@ func (cl *BTClient) SendPeerMessage(addr *net.TCPAddr, message btnet.PeerMessage
 func (cl *BTClient) messageHandler(conn *net.TCPConn) {
 	// Check if this is a new connection
 	// If so we need to initialize the Peer
-	if conn.RemoteAddr() == nil {
+	if conn == nil || conn.RemoteAddr() == nil {
 		return
 	}
 	peer, ok := cl.peers[conn.RemoteAddr().String()]

@@ -175,7 +175,18 @@ func (cl *BTClient) main() {
 }
 
 func (cl *BTClient) GetStatusString() (string, int) {
-	output := fmt.Sprintf("Known peers: %d\n", len(cl.peers))
+    // Here we are dividing by two because of the way the code is
+    // currently structured.
+    // tl;dr: we dont want to repeat a large chunks of code, so
+    // we have a single message handler and peer list for incoming
+    // and outgoing messages. Because when dialing a TCP connection
+    // opens a new port and binds it to the target peer's listen port,
+    // we have two ports for every known peer, the port the peer is
+    // listening on and a port that we can use to respond to a requesting
+    // peers messages.
+    // TODO: Split up the listen messageHandler and the request->response
+    //       messageHandler
+	output := fmt.Sprintf("Known peers: %d\n", len(cl.peers)/2)
 	output += "Download status: "
 	bitfield, lines := util.BitfieldToString(cl.PieceBitmap, 40)
 	output += bitfield + "\n"
