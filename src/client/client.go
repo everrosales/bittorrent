@@ -96,9 +96,11 @@ func (cl *BTClient) Kill() {
 	select {
 	case _, ok := <-cl.shutdown:
 		if ok {
+			util.WPrintf("Killing the server\n")
 			close(cl.shutdown)
 		}
 	default:
+		util.WPrintf("nothing\n")
 		// channel already closed
 	}
 }

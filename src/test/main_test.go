@@ -59,6 +59,8 @@ func TestTwoClients(t *testing.T) {
 	seeder.Kill()
 	downloader.Kill()
 
+	util.Wait(500)
+
 	res := loadDataFromPersister(downloaderPersister)
 	metadata := fs.Read(file)
 
@@ -111,10 +113,11 @@ func TestThreeClients(t *testing.T) {
 	downloader.Kill()
 	downloader2.Kill()
 
-	res := loadDataFromPersister(downloaderPersister)
-	metadata := fs.Read(file)
+	util.Wait(500)
 
+	res := loadDataFromPersister(downloaderPersister)
 	res2 := loadDataFromPersister(downloaderPersister2)
+	metadata := fs.Read(file)
 
 	os.Remove(seederPersister.Path)
 	os.Remove(downloaderPersister.Path)
@@ -178,6 +181,8 @@ func TestTwoClientsLargeFile(t *testing.T) {
 	seeder.Kill()
 	downloader.Kill()
 
+	util.Wait(500)
+
 	res := loadDataFromPersister(downloaderPersister)
 	metadata := fs.Read(file)
 
@@ -203,8 +208,6 @@ func TestTwoClientsLargeFile(t *testing.T) {
 	util.EndTest()
 }
 
-// TODO: test with other files/piece sizes/numbers of pieces
-// TODO: test with one seeder, multiple downloaders
 // TODO: test with multiple seeders, multiple downloaders
 // TODO: test with 1 stopped peer
 // TODO: test with stopped and restarted seeder

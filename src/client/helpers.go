@@ -64,7 +64,7 @@ func (cl *BTClient) atomicSetPeer(addr string, peer *btnet.Peer) {
 
 func (cl *BTClient) atomicDeletePeer(addr string) {
 	cl.lock("client/atomicDeletePeer")
-	util.WPrintf("%d: keepalive timeout exceeded for %s\n", addr)
+	util.WPrintf("%s: keepalive timeout exceeded for %s\n", cl.port, addr)
 	delete(cl.peers, addr)
 	cl.unlock("client/atomicDeletePeer")
 }

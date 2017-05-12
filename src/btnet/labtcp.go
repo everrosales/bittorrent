@@ -4,13 +4,12 @@ import (
 	"encoding/binary"
 	"io"
 	"net"
+	"strings"
 	"time"
 	"util"
 )
 
-// TODO: more graceful error if addr already in use
-
-func StartTCPServer(addr string, handler func(*net.TCPConn)) {
+func StartTCPServer(addr string, handler func(*net.TCPConn)) bool {
 	util.TPrintf("Starting the TCP Server on addr %s...\n", addr)
 	tcpAddr, err := net.ResolveTCPAddr("tcp", addr)
 	if err != nil {
@@ -20,6 +19,9 @@ func StartTCPServer(addr string, handler func(*net.TCPConn)) {
 	if err != nil {
 		// complain about things dying
 		util.WPrintf("labtcp StartTCPServer: %s\n", err)
+		if strings.Contains(err.Error(), "address already in use") {
+			return false
+		}
 	}
 	go func(ln *net.TCPListener) {
 		for {
@@ -31,13 +33,13 @@ func StartTCPServer(addr string, handler func(*net.TCPConn)) {
 			go handler(conn)
 		}
 	}(ln)
+	return true
 }
 
 func DoDial(addr *net.TCPAddr, data []byte) (*net.TCPConn, error) {
 	util.TPrintf("Dialing: %v\n", addr.String())
 	conn, err := net.DialTCP("tcp", nil, addr)
 	if err != nil {
-		// Cry
 		util.WPrintf("labtcp DoDial: %s\n", err)
 		return conn, err
 	}
@@ -46,7 +48,6 @@ func DoDial(addr *net.TCPAddr, data []byte) (*net.TCPConn, error) {
 		util.WPrintf("labtcp DoDail: %s\n", err)
 	}
 	return conn, err
-	// return ReadMessage(conn)
 }
 
 func ReadHandshake(conn *net.TCPConn) ([]byte, error) {

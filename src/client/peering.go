@@ -14,7 +14,10 @@ const peerTimeout = time.Millisecond * 3000
 const DialTimeout = time.Millisecond * 100
 
 func (cl *BTClient) startTCPServer() {
-	btnet.StartTCPServer(cl.ip+":"+cl.port, cl.messageHandler)
+	if !btnet.StartTCPServer(cl.ip+":"+cl.port, cl.messageHandler) {
+		util.EPrintf("Error: port %s already in use\n", cl.port)
+		cl.Kill()
+	}
 }
 
 func (cl *BTClient) requestBlock(piece int, block int) {
