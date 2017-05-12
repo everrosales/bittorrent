@@ -282,11 +282,15 @@ func (cl *BTClient) messageHandler(conn *net.TCPConn) {
 			case btnet.Bitfield:
 				peer.SetBitfield(peerMessage.Bitfield)
 			case btnet.Request:
+				index := int(peerMessage.Index)
 				util.TPrintf("%s: received request msg\n", cl.port)
-				cl.sendBlock(int(peerMessage.Index), peerMessage.Begin, peerMessage.Length, peer)
+				cl.atomicAddUpdate(conn.RemoteAddr().String(), index, "Sending")
+				cl.sendBlock(index, peerMessage.Begin, peerMessage.Length, peer)
 			case btnet.Piece:
-				util.TPrintf("%s: received piece msg\n", cl.port)
-				cl.saveBlock(int(peerMessage.Index), peerMessage.Begin, peerMessage.Length, peerMessage.Block)
+				index := int(peerMessage.Index)
+				util.TPrintf("%s: received piece %d msg\n", cl.port, index)
+				cl.atomicAddUpdate(conn.RemoteAddr().String(), index, "Received")
+				cl.saveBlock(index, peerMessage.Begin, peerMessage.Length, peerMessage.Block)
 			case btnet.Cancel:
 				// TODO make a cancel queue and dont send out pieces if you recieve one of these
 				fallthrough

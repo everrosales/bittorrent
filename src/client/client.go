@@ -12,8 +12,10 @@ import (
 )
 
 // TODO: pruning client's peer list when tracker says that peer is down
+// TODO: kill underlying TCP connections when client is killed
 
 const NumDownloaders int = 5
+const NumUpdates int = 8
 
 type status string
 
@@ -27,6 +29,7 @@ type BTClient struct {
 	mu        sync.Mutex
 	persister *Persister
 	alive     bool
+	updates   []string
 
 	ip          string
 	port        string
@@ -54,6 +57,7 @@ func StartBTClient(ip string, port int, metadataPath string, seedPath string, ou
 	cl := &BTClient{}
 	cl.persister = persister
 	cl.alive = true
+	cl.updates = make([]string, NumUpdates, NumUpdates)
 
 	cl.ip = ip
 	cl.port = strconv.Itoa(port)
@@ -178,10 +182,18 @@ func (cl *BTClient) GetStatusString() (string, int) {
 	// peers messages.
 	// TODO: Split up the listen messageHandler and the request->response
 	//       messageHandler
-	// TODO: add most recent peers downloaded to status string
-	output := fmt.Sprintf("Known peers: %d\n", len(cl.peers)/2)
+	cl.lock("status string")
+	numPeers := len(cl.peers) / 2
+	update := ""
+	for _, s := range cl.updates {
+		update += s + "\n"
+	}
+	extraLines := len(cl.updates)
+	cl.unlock("status string")
+	output := fmt.Sprintf("Known peers: %d\n", numPeers)
 	output += "Download status: "
 	bitfield, lines := util.BitfieldToString(cl.PieceBitmap, 40)
-	output += bitfield + "\n"
-	return output, lines + 2
+	output += bitfield + "\n--------\n"
+	output += update
+	return output, lines + 3 + extraLines
 }

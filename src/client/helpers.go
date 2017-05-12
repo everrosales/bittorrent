@@ -2,6 +2,7 @@ package btclient
 
 import (
 	"btnet"
+	"fmt"
 	"fs"
 	"math/rand"
 	"util"
@@ -31,6 +32,12 @@ func (cl *BTClient) getRandomPeerOrder() []*btnet.Peer {
 		i += 1
 	}
 	return peerList
+}
+
+func (cl *BTClient) atomicAddUpdate(addr string, piece int, verb string) {
+	cl.lock("adding received update")
+	defer cl.unlock("adding received update")
+	cl.updates = append(cl.updates[1:], fmt.Sprintf("%s block in piece %d - %s", verb, piece, addr))
 }
 
 func (cl *BTClient) AtomicGetBitmap() []bool {
