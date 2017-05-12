@@ -64,7 +64,7 @@ func StartBTClient(ip string, port int, metadataPath string, seedPath string, ou
 	cl.infoHash = fs.GetInfoHash(fs.ReadTorrent(metadataPath))
 	cl.outputPath = outputPath
 
-	cl.heartbeatInterval = 5
+	cl.heartbeatInterval = 1
 	cl.status = Started
 	cl.shutdown = make(chan bool)
 

@@ -49,7 +49,8 @@ func (cl *BTClient) trackerHeartbeat() {
 			}
 		}
 		cl.lock("tracking/trackerHeartbeat")
-		wait := cl.heartbeatInterval * 1000
+		// wait := cl.heartbeatInterval * 1000
+        wait := 2000
         cl.unlock("tracking/trackerHeartbeat")
 		util.Wait(wait)
 	}
