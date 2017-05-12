@@ -43,7 +43,6 @@ func (cl *BTClient) requestBlock(piece int, block int) {
 		}
 	}
 
-
 }
 
 func (cl *BTClient) sendBlock(index int, begin int, length int, peer *btnet.Peer) {
@@ -96,9 +95,8 @@ func (cl *BTClient) saveBlock(index int, begin int, length int, block []byte) {
 
 		// hash and save piece
 		if cl.Pieces[index].Hash() != cl.torrentMeta.PieceHashes[index] {
-			util.TPrintf("%s: hash didn't match\n", cl.port)
-			// util.TPrintf("%s: %x != %x\n", cl.port, cl.Pieces[index].Hash(), cl.torrentMeta.PieceHashes[index])
-			util.TPrintf("%s: hash lens %d, %d", cl.port, len(cl.Pieces[index].Hash()), len(cl.torrentMeta.PieceHashes[index]))
+			util.WPrintf("%s: hash didn't match\n", cl.port)
+			util.WPrintf("%s: hash lengths: %d, %d", cl.port, len(cl.Pieces[index].Hash()), len(cl.torrentMeta.PieceHashes[index]))
 			delete(cl.blockBitmap, index)
 			cl.unlock("peering/saveBlock")
 			return
@@ -109,9 +107,7 @@ func (cl *BTClient) saveBlock(index int, begin int, length int, block []byte) {
 		copy(pieceBitmap, cl.PieceBitmap)
 		pieces := make([]fs.Piece, len(cl.Pieces))
 		copy(pieces, cl.Pieces)
-		// cl.unlock("peering/saveBlock")
 		cl.persister.persistPieces(pieces, pieceBitmap)
-		// cl.lock("peering/saveBlock")
 	}
 	cl.unlock("peering/saveBlock")
 
@@ -201,7 +197,7 @@ func (cl *BTClient) SetupPeerConnections(addr *net.TCPAddr, conn *net.TCPConn) {
 			}
 			data := btnet.EncodePeerMessage(msg)
 			util.TPrintf("Sending encoded message from: %v, to: %v, type: %v\n",
-			peer.Conn.LocalAddr().String(), peer.Conn.RemoteAddr().String(), msg.Type)
+				peer.Conn.LocalAddr().String(), peer.Conn.RemoteAddr().String(), msg.Type)
 
 			_, err := peer.Conn.Write(data)
 			if err != nil {
@@ -281,7 +277,7 @@ func (cl *BTClient) messageHandler(conn *net.TCPConn) {
 		return
 	}
 
-    util.TPrintf("~~~ Got a connection! ~~~\n")
+	util.TPrintf("~~~ Got a connection! ~~~\n")
 	for {
 		// Process the message
 		buf, err := btnet.ReadMessage(conn)
@@ -297,7 +293,7 @@ func (cl *BTClient) messageHandler(conn *net.TCPConn) {
 		// a KeepAlive message
 		peer.KeepAlive <- true
 
-        // Massive switch case that would handle incoming messages depending on message type
+		// Massive switch case that would handle incoming messages depending on message type
 		if !peerMessage.KeepAlive {
 			switch peerMessage.Type {
 			case btnet.Choke:
@@ -320,20 +316,20 @@ func (cl *BTClient) messageHandler(conn *net.TCPConn) {
 				cl.saveBlock(int(peerMessage.Index), peerMessage.Begin, peerMessage.Length, peerMessage.Block)
 			case btnet.Cancel:
 				// TODO make a cancel queue and dont send out pieces if you recieve one of these
-                fallthrough
+				fallthrough
 			default:
 				// Unsupported message
-                util.TPrintf("%s: Unsupported message\n", cl.port)
-                // Drop the connection
-                conn.Close()
+				util.TPrintf("%s: Unsupported message\n", cl.port)
+				// Drop the connection
+				conn.Close()
 			}
 		}
 
 		// Update okay to make sure that we still have a connection
 		ok = conn.RemoteAddr() != nil
-        if !ok {
-            return
-        }
+		if !ok {
+			return
+		}
 	}
 	util.TPrintf("%s: exiting messageHandler\n", cl.port)
 }

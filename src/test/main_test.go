@@ -43,14 +43,14 @@ func TestTwoClients(t *testing.T) {
 	seed := SeedFileSmall
 	output := "out/puppy_download1.jpg"
 
-	seederPersister := btclient.MakePersister("test1")
-	downloaderPersister := btclient.MakePersister("test2")
+	seederPersister := btclient.MakePersister("out/test1")
+	downloaderPersister := btclient.MakePersister("out/test2")
 
 	tr := bttracker.StartBTTracker(file, 8000)
 	seeder := btclient.StartBTClient("localhost", 6666, file, seed, "", seederPersister)
 	downloader := btclient.StartBTClient("localhost", 6667, file, "", output, downloaderPersister)
 
-	util.Printf("  Waiting for download to finish...\n")
+	util.TPrintf("  Waiting for download to finish...\n")
 	for !downloader.CheckDone() {
 		util.Wait(100)
 	}
@@ -80,6 +80,7 @@ func TestTwoClients(t *testing.T) {
 	if err != nil || !same {
 		t.Fatalf("Seed file and downloaded file don't match: %s", err.Error())
 	}
+	os.Remove(output)
 	util.Wait(1000)
 	util.EndTest()
 }
@@ -91,16 +92,16 @@ func TestThreeClients(t *testing.T) {
 	output1 := "out/puppy_download2.jpg"
 	output2 := "out/puppy_download3.jpg"
 
-	seederPersister := btclient.MakePersister("test1")
-	downloaderPersister := btclient.MakePersister("test2")
-	downloaderPersister2 := btclient.MakePersister("test3")
+	seederPersister := btclient.MakePersister("out/test1")
+	downloaderPersister := btclient.MakePersister("out/test2")
+	downloaderPersister2 := btclient.MakePersister("out/test3")
 
 	tr := bttracker.StartBTTracker(file, 8000)
 	seeder := btclient.StartBTClient("localhost", 6668, file, seed, "", seederPersister)
 	downloader := btclient.StartBTClient("localhost", 6669, file, "", output1, downloaderPersister)
 	downloader2 := btclient.StartBTClient("localhost", 6670, file, "", output2, downloaderPersister2)
 
-	util.Printf("  Waiting for download to finish...\n")
+	util.TPrintf("  Waiting for download to finish...\n")
 	for !downloader.CheckDone() || !downloader2.CheckDone() {
 		util.Wait(100)
 	}
@@ -144,11 +145,13 @@ func TestThreeClients(t *testing.T) {
 	if err != nil || !same {
 		t.Fatalf("Client1: Seed file and downloaded file don't match: %s", err.Error())
 	}
-	same, err = util.CompareFiles(seed, output1)
+	same, err = util.CompareFiles(seed, output2)
 	if err != nil || !same {
 		t.Fatalf("Client2: Seed file and downloaded file don't match: %s", err.Error())
 	}
 
+	os.Remove(output1)
+	os.Remove(output2)
 	util.Wait(1000)
 	util.EndTest()
 }
@@ -159,14 +162,14 @@ func TestTwoClientsLargeFile(t *testing.T) {
 	seed := SeedFileLarge
 	output := "out/pupper_download1.jpg"
 
-	seederPersister := btclient.MakePersister("test1")
-	downloaderPersister := btclient.MakePersister("test2")
+	seederPersister := btclient.MakePersister("out/test1")
+	downloaderPersister := btclient.MakePersister("out/test2")
 
 	tr := bttracker.StartBTTracker(file, 8001)
 	seeder := btclient.StartBTClient("localhost", 6671, file, seed, "", seederPersister)
 	downloader := btclient.StartBTClient("localhost", 6672, file, "", output, downloaderPersister)
 
-	util.Printf("  Waiting for download to finish...\n")
+	util.TPrintf("  Waiting for download to finish...\n")
 	for !downloader.CheckDone() {
 		util.Wait(100)
 	}
@@ -196,6 +199,7 @@ func TestTwoClientsLargeFile(t *testing.T) {
 	if err != nil || !same {
 		t.Fatalf("Seed file and downloaded file don't match: %s", err.Error())
 	}
+	os.Remove(output)
 	util.EndTest()
 }
 

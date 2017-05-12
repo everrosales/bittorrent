@@ -119,10 +119,14 @@ func (cl *BTClient) CheckShutdown() bool {
 // returns true if file download is done
 func (cl *BTClient) CheckDone() bool {
 	cl.lock("checking done")
-	defer cl.unlock("checking done")
-	if allTrue(cl.PieceBitmap) {
+	if allTrue(cl.PieceBitmap) { // if done, save piece
+		pieces := make([]fs.Piece, len(cl.Pieces))
+		copy(pieces, cl.Pieces)
+		cl.unlock("checking done")
+		fs.CombinePieces(cl.outputPath, pieces, cl.torrentMeta.Files[0].Length)
 		return true
 	}
+	cl.unlock("checking done")
 	return false
 }
 
@@ -132,15 +136,9 @@ func (cl *BTClient) CheckSaveOutput() {
 		if cl.CheckShutdown() {
 			return
 		}
-		cl.lock("main/saveoutput")
-		if allTrue(cl.PieceBitmap) {
-			pieces := make([]fs.Piece, len(cl.Pieces))
-			copy(pieces, cl.Pieces)
-			cl.unlock("main/saveoutput")
-			fs.CombinePieces(cl.outputPath, pieces, cl.torrentMeta.Files[0].Length)
+		if cl.CheckDone() {
 			return
 		}
-		cl.unlock("main/saveoutput")
 		util.Wait(100)
 	}
 }
@@ -175,17 +173,17 @@ func (cl *BTClient) main() {
 }
 
 func (cl *BTClient) GetStatusString() (string, int) {
-    // Here we are dividing by two because of the way the code is
-    // currently structured.
-    // tl;dr: we dont want to repeat a large chunks of code, so
-    // we have a single message handler and peer list for incoming
-    // and outgoing messages. Because when dialing a TCP connection
-    // opens a new port and binds it to the target peer's listen port,
-    // we have two ports for every known peer, the port the peer is
-    // listening on and a port that we can use to respond to a requesting
-    // peers messages.
-    // TODO: Split up the listen messageHandler and the request->response
-    //       messageHandler
+	// Here we are dividing by two because of the way the code is
+	// currently structured.
+	// tl;dr: we dont want to repeat a large chunks of code, so
+	// we have a single message handler and peer list for incoming
+	// and outgoing messages. Because when dialing a TCP connection
+	// opens a new port and binds it to the target peer's listen port,
+	// we have two ports for every known peer, the port the peer is
+	// listening on and a port that we can use to respond to a requesting
+	// peers messages.
+	// TODO: Split up the listen messageHandler and the request->response
+	//       messageHandler
 	output := fmt.Sprintf("Known peers: %d\n", len(cl.peers)/2)
 	output += "Download status: "
 	bitfield, lines := util.BitfieldToString(cl.PieceBitmap, 40)
