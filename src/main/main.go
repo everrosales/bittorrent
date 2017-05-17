@@ -35,6 +35,7 @@ func main() {
 	debugFlag := flag.String("debug", "None", "Debug level [Status|None|Info|Trace|Lock]")
 	urlFlag := flag.String("url", "", "URL of tracker (-generate only)")
 	portFlag := flag.Int("port", 8000, "Port (default 8000)")
+	persisterFlag := flag.String("persister", "", "file for loading and saving download progress")
 	flag.Parse()
 
 	// set debug level
@@ -91,20 +92,29 @@ func main() {
 		}
 		return
 	} else if *clientFlag {
-		tmpFile, err := ioutil.TempFile(".", *fileFlag+"_download")
-		if err != nil {
-			panic(err)
+		var persister *btclient.Persister
+		var tmpFile *os.File
+		if *persisterFlag == "" {
+			tmpFile, err := ioutil.TempFile(".", *fileFlag+"_download")
+			if err != nil {
+				panic(err)
+			}
+			persister = btclient.MakePersister(tmpFile.Name())
+		} else {
+			persister = btclient.MakePersister(*persisterFlag)
 		}
 
 		c := make(chan os.Signal, 2)
 		signal.Notify(c, os.Interrupt, syscall.SIGTERM)
 
-		cl := btclient.StartBTClient(*ipFlag, *portFlag, *torrentFlag, *seedFlag, *fileFlag, btclient.MakePersister(tmpFile.Name()))
+		cl := btclient.StartBTClient(*ipFlag, *portFlag, *torrentFlag, *seedFlag, *fileFlag, persister)
 
 		go func() {
 			<-c
 			cleanup(cl)
-			os.Remove(tmpFile.Name())
+			if *persisterFlag == "" {
+				os.Remove(tmpFile.Name())
+			}
 			os.Exit(1)
 		}()
 

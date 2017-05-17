@@ -14,7 +14,7 @@ Requires Go `1.8` or greater, for shutdown of HTTP servers.
 You'll also need to install http://github.com/zeebo/bencode/. In the `src` folder, run `go get github.com/zeebo/bencode`.
 
 ## Usage
-To run either the tracker or client, go in to `src/main` and run `go run main.go`. Run the tracker with flag `-tracker` and run the client with flag `-client`. Specify the `.torrent` file you want to use with `-torrent=<NAME>`. Other flags include `-debug` and `-port`. 
+To run either the tracker or client, go in to `src/main` and run `go run main.go`. Run the tracker with flag `-tracker` and run the client with flag `-client`. Specify the `.torrent` file you want to use with `-torrent=<NAME>`. Other flags include `-debug`, `-port`, and `-persister`, which allows you to save progress to a specific file or restart a stopped download. 
 
 You can also generate `.torrent` files using the main utility. Run a command like `go run main.go -generate -torrent=out.torrent -file=<filename> -url=<tracker url>`.
 
@@ -42,5 +42,5 @@ The file `main/torrent/test.torrent` is used in our unit tests and was downloade
 ### Manual Testing
 Run manual tests with the following commands:
 * `go run main.go -tracker -port=8000 -torrent=torrent/puppy.torrent -debug=Info`
-* `go run main.go -client -port=8001 -torrent=torrent/puppy.torrent -file=out.jpg -debug=Status`
+* `go run main.go -client -port=8001 -torrent=torrent/puppy.torrent -file=out.jpg -debug=Status -persister=download_progress`
 * `go run main.go -client -port=8002 -torrent=torrent/puppy.torrent -seed=seed/puppy.jpg -debug=Status`
